@@ -1,0 +1,2897 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AI Model Analysis - December 2025</title>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-datalabels@2"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-annotation@2"></script>
+    <style>
+        :root {
+            --primary: #2563eb;
+            --primary-hover: #1d4ed8;
+            --secondary: #64748b;
+            --success: #10b981;
+            --danger: #ef4444;
+            --background: #f8fafc;
+            --card-bg: #ffffff;
+            --text-main: #0f172a;
+            --text-muted: #64748b;
+            --border: #e2e8f0;
+            --radius: 12px;
+            --shadow: 0 4px 6px -1px rgb(0 0 0 / 0.1);
+        }
+
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body {
+            font-family: 'Inter', system-ui, -apple-system, sans-serif;
+            background-color: var(--background);
+            color: var(--text-main);
+            padding: 2rem 1rem;
+        }
+
+        .container { max-width: 1100px; margin: 0 auto; }
+        header { text-align: center; margin-bottom: 2.5rem; }
+        h1 { font-size: 2rem; font-weight: 800; letter-spacing: -0.025em; margin-bottom: 0.5rem; text-align: center; }
+        .subtitle { text-align: center; color: var(--text-muted); margin-bottom: 0.5rem; font-size: 0.9rem; text-transform: uppercase; letter-spacing: 0.05em; }
+        
+        .toolbar {
+            display: flex;
+            justify-content: center;
+            gap: 0.75rem;
+            margin-bottom: 2rem;
+            flex-wrap: wrap;
+        }
+
+        .btn {
+            padding: 0.625rem 1.25rem;
+            font-size: 0.875rem;
+            font-weight: 600;
+            border-radius: var(--radius);
+            cursor: pointer;
+            transition: all 0.2s;
+            border: 1px solid transparent;
+            display: inline-flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+        .btn-primary { background: var(--primary); color: white; }
+        .btn-primary:hover { background: var(--primary-hover); }
+        .btn-ghost { background: white; color: var(--text-muted); border-color: var(--border); }
+        .btn-ghost:hover { background: var(--background); }
+        .btn-ghost.active { background: var(--primary); color: white; border-color: var(--primary); }
+        .btn-danger { background: #fee2e2; color: var(--danger); }
+        .btn-danger:hover { background: #fecaca; }
+        .btn-success { background: var(--success); color: white; }
+        .btn-success:hover { background: #059669; }
+        .btn-clone { background: linear-gradient(135deg, #8b5cf6, #ec4899); color: white; }
+        .btn-clone:hover { opacity: 0.9; }
+
+        .btn-group { display: flex; gap: 0; }
+        .btn-group .btn { border-radius: 0; }
+        .btn-group .btn:first-child { border-radius: var(--radius) 0 0 var(--radius); }
+        .btn-group .btn:last-child { border-radius: 0 var(--radius) var(--radius) 0; }
+
+        .chart-card {
+            background: var(--card-bg);
+            border-radius: 16px;
+            border: 1px solid var(--border);
+            box-shadow: var(--shadow);
+            padding: 1.5rem;
+            margin-bottom: 2rem;
+        }
+        .chart-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 1rem; flex-wrap: wrap; gap: 1rem; }
+        .chart-title { font-size: 1.1rem; font-weight: 700; color: var(--text-main); }
+        .chart-actions { display: flex; gap: 0.5rem; align-items: center; flex-wrap: wrap; }
+        .chart-viewport { position: relative; width: 100%; height: 450px; }
+        .chart-viewport.vertical { height: 600px; }
+
+        .modal-overlay {
+            position: fixed;
+            inset: 0;
+            background: rgba(0,0,0,0.5);
+            backdrop-filter: blur(4px);
+            display: none;
+            align-items: center;
+            justify-content: center;
+            z-index: 100;
+        }
+        .modal-overlay.visible { display: flex; }
+        .modal-content {
+            background: white;
+            padding: 1.5rem;
+            border-radius: 20px;
+            width: 95%;
+            max-width: 900px;
+            max-height: 90vh;
+            overflow-y: auto;
+        }
+        .modal-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 1.5rem; padding-bottom: 1rem; border-bottom: 1px solid var(--border); }
+        .modal-header h2 { font-size: 1.25rem; font-weight: 700; }
+        .modal-footer { display: flex; justify-content: flex-end; gap: 0.75rem; margin-top: 1.5rem; padding-top: 1rem; border-top: 1px solid var(--border); }
+
+        .grid-form {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+            gap: 1rem;
+            margin-bottom: 1.5rem;
+        }
+        .form-group { display: flex; flex-direction: column; gap: 0.25rem; }
+        .form-group label { font-size: 0.75rem; font-weight: 700; color: var(--text-muted); text-transform: uppercase; }
+        .input-field {
+            width: 100%;
+            padding: 0.6rem;
+            border: 1px solid var(--border);
+            border-radius: 8px;
+            font-size: 0.875rem;
+            transition: border-color 0.2s;
+        }
+        .input-field:focus { outline: none; border-color: var(--primary); box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.1); }
+        .checkbox-label { flex-direction: row; align-items: center; gap: 0.5rem; }
+        .checkbox-label input { width: 18px; height: 18px; accent-color: var(--primary); }
+
+        table { width: 100%; border-collapse: collapse; margin-top: 1rem; font-size: 0.875rem; }
+        th { text-align: left; padding: 0.75rem; border-bottom: 2px solid var(--border); color: var(--text-muted); font-weight: 600; text-transform: uppercase; font-size: 0.75rem; }
+        td { padding: 0.75rem; border-bottom: 1px solid var(--border); }
+        tr:hover { background: var(--background); }
+
+        .btn-icon {
+            padding: 0.4rem;
+            border-radius: 6px;
+            background: transparent;
+            border: 1px solid var(--border);
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+        .btn-icon:hover { background: var(--background); }
+        .btn-icon.delete:hover { background: #fee2e2; border-color: #fecaca; color: var(--danger); }
+
+        .model-selector {
+            background: var(--background);
+            border: 1px solid var(--border);
+            border-radius: var(--radius);
+            padding: 1rem;
+            margin-bottom: 1rem;
+            display: none;
+        }
+        .model-selector.visible { display: block; }
+        .model-selector-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 1rem; flex-wrap: wrap; gap: 0.75rem; }
+        .model-selector-title { font-weight: 600; font-size: 0.875rem; }
+        .model-selector-actions { display: flex; gap: 0.5rem; flex-wrap: wrap; }
+
+        .model-pill-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(180px, 1fr)); gap: 0.5rem; margin: 1rem 0; }
+        .model-pill { 
+            padding: 0.5rem 0.75rem;
+            border: 1px solid var(--border);
+            border-radius: 8px; 
+            cursor: pointer;
+            font-size: 0.8rem;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            transition: all 0.2s;
+            background: white;
+        }
+        .model-pill:hover { border-color: var(--primary); }
+        .model-pill.active { background: #eff6ff; border-color: var(--primary); font-weight: 600; }
+        .model-pill input { accent-color: var(--primary); }
+
+        .legend-vendor {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 1rem;
+            margin-bottom: 1rem;
+            padding: 0.75rem;
+            background: white;
+            border-radius: 8px;
+            border: 1px solid var(--border);
+        }
+        .legend-item { display: flex; align-items: center; gap: 0.4rem; font-size: 0.8rem; color: var(--text-muted); }
+        .vendor-dot { width: 10px; height: 10px; border-radius: 50%; flex-shrink: 0; }
+
+        .cloned-indicator {
+            background: linear-gradient(135deg, #8b5cf6, #ec4899);
+            color: white;
+            padding: 0.2rem 0.6rem;
+            border-radius: 20px;
+            font-size: 0.65rem;
+            font-weight: 700;
+            text-transform: uppercase;
+        }
+
+        .empty-state {
+            text-align: center;
+            padding: 4rem 2rem;
+            color: var(--text-muted);
+        }
+        .empty-state h3 { margin-bottom: 0.5rem; color: var(--text-main); font-weight: 600; }
+
+        @media (max-width: 768px) {
+            h1 { font-size: 1.5rem; }
+            .chart-header { flex-direction: column; align-items: flex-start; }
+            .grid-form { grid-template-columns: 1fr; }
+            .model-pill-grid { grid-template-columns: repeat(auto-fill, minmax(140px, 1fr)); }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <header style="margin-bottom: 2rem; padding-bottom: 1.5rem; border-bottom: 1px solid var(--border);">
+            <h1 style="font-size: 1.75rem; font-weight: 700; margin-bottom: 0.25rem;">AI Model Intelligence vs Cost</h1>
+            <p class="subtitle" style="margin-bottom: 1rem;">December 2025 Benchmark Comparison</p>
+            <div style="display: flex; justify-content: center; gap: 1.5rem; font-size: 0.8rem; color: var(--text-muted);">
+                <a href="https://artificialanalysis.ai/" target="_blank" style="color: var(--text-muted); text-decoration: none; display: flex; align-items: center; gap: 6px;">
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <circle cx="12" cy="12" r="10"/>
+                        <line x1="2" y1="12" x2="22" y2="12"/>
+                        <path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"/>
+                    </svg>
+                    artificialanalysis.ai
+                </a>
+                <a href="https://www.linkedin.com/in/k-karaszewski/" target="_blank" style="color: var(--text-muted); text-decoration: none; display: flex; align-items: center; gap: 6px;">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="currentColor">
+                        <path d="M20.447 20.452h-3.554v-5.569c0-1.328-.027-3.037-1.852-3.037-1.853 0-2.136 1.445-2.136 2.939v5.667H9.351V9h3.414v1.561h.046c.477-.9 1.637-1.85 3.37-1.85 3.601 0 4.267 2.37 4.267 5.455v6.286zM5.337 7.433c-1.144 0-2.063-.926-2.063-2.065 0-1.138.92-2.063 2.063-2.063 1.14 0 2.064.925 2.064 2.063 0 1.139-.925 2.065-2.064 2.065zm1.782 13.019H3.555V9h3.564v11.452zM22.225 0H1.771C.792 0 0 .774 0 1.729v20.542C0 23.227.792 24 1.771 24h20.451C23.2 24 24 23.227 24 22.271V1.729C24 .774 23.2 0 22.222 0h.003z"/>
+                    </svg>
+                    Krzysztof Karaszewski
+                </a>
+            </div>
+        </header>
+
+        <div class="toolbar" style="gap: 0.5rem;">
+            <button class="btn btn-primary" onclick="openDataEditor()" style="background: #1e293b;">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/>
+                    <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/>
+                </svg>
+                Edit Data
+            </button>
+            <button class="btn btn-primary" onclick="openAddChart()" style="background: #0f766e;">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <line x1="12" y1="5" x2="12" y2="19"/>
+                    <line x1="5" y1="12" x2="19" y2="12"/>
+                </svg>
+                Add Chart
+            </button>
+            <button class="btn btn-ghost" onclick="clearAllCharts()">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <polyline points="3,6 5,6 21,6"/>
+                    <path d="M19,6v14a2,2,0,0,1-2,2H7a2,2,0,0,1-2-2V6m3,0V4a2,2,0,0,1,2-2h4a2,2,0,0,1,2,2v2"/>
+                </svg>
+                Clear Charts
+            </button>
+            <button class="btn btn-ghost" onclick="clearLocalStorage()" style="color: #dc2626;">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <path d="M3 6h18"/>
+                    <path d="M8 6V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/>
+                    <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6"/>
+                    <line x1="10" y1="11" x2="10" y2="17"/>
+                    <line x1="14" y1="11" x2="14" y2="17"/>
+                </svg>
+                Clear Storage
+            </button>
+            <button class="btn btn-ghost" onclick="resetToDefaults()">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"/>
+                    <path d="M3 3v5h5"/>
+                </svg>
+                Reset
+            </button>
+            <span style="border-left: 1px solid #e2e8f0; height: 24px; margin: 0 0.25rem;"></span>
+            <button class="btn btn-ghost" onclick="saveConfiguration()" style="color: #0f766e;">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"/>
+                    <polyline points="17 21 17 13 7 13 7 21"/>
+                    <polyline points="7 3 7 8 15 8"/>
+                </svg>
+                Save
+            </button>
+            <button class="btn btn-ghost" onclick="document.getElementById('loadFileInput').click()" style="color: #0f766e;">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>
+                    <polyline points="17 8 12 3 7 8"/>
+                    <line x1="12" y1="3" x2="12" y2="15"/>
+                </svg>
+                Load
+            </button>
+            <button class="btn btn-ghost" onclick="showLoadModal()" title="Paste JSON configuration" style="color: #0f766e;">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <path d="M16 4h2a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h2"/>
+                    <rect x="8" y="2" width="8" height="4" rx="1" ry="1"/>
+                </svg>
+            </button>
+            <input type="file" id="loadFileInput" accept=".json" style="display: none;" onchange="loadConfiguration(event)">
+        </div>
+
+        <div id="chartsContainer"></div>
+        
+        <div id="emptyState" class="empty-state" style="display: none;">
+            <h3>No charts to display</h3>
+            <p>Click "Add Chart" to create a new visualization</p>
+        </div>
+
+        <!-- Export Modal -->
+        <div class="modal-overlay" id="exportModal">
+            <div class="modal" style="max-width: 90%; max-height: 90%;">
+                <div class="modal-header">
+                    <h2>Export Image</h2>
+                    <button class="btn btn-ghost" onclick="closeExportModal()">✕</button>
+                </div>
+                <p style="margin-bottom: 1rem; color: #64748b; font-size: 0.875rem;">Right-click the image and select "Save image as..." to download</p>
+                <div id="exportImageContainer" style="text-align: center; overflow: auto; max-height: 70vh;">
+                    <img id="exportImage" style="max-width: 100%; border: 1px solid #e2e8f0; border-radius: 8px;">
+                </div>
+                <div class="modal-footer" style="margin-top: 1rem;">
+                    <button class="btn btn-ghost" onclick="closeExportModal()">Close</button>
+                    <button class="btn btn-primary" onclick="tryDirectDownload()">Try Download</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Data Editor Modal -->
+    <div class="modal-overlay" id="dataEditorModal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2>Model Data Editor</h2>
+                <button class="btn btn-ghost" onclick="closeDataEditor()">✕</button>
+            </div>
+            <h3 style="margin-bottom: 15px; font-size: 1rem;">Add New Model</h3>
+            <div id="addModelForm">
+                <div class="grid-form">
+                    <div class="form-group">
+                        <label>Model Name *</label>
+                        <input type="text" id="modelName" class="input-field" placeholder="e.g. GPT-5.3">
+                    </div>
+                    <div class="form-group">
+                        <label>Vendor *</label>
+                        <input type="text" id="modelVendor" class="input-field" placeholder="e.g. OpenAI" list="vendorList">
+                        <datalist id="vendorList"></datalist>
+                    </div>
+                    <div class="form-group checkbox-label">
+                        <input type="checkbox" id="modelReasoning">
+                        <label style="text-transform: none; font-size: 0.875rem;">Reasoning</label>
+                    </div>
+                </div>
+                <div class="grid-form">
+                    <div class="form-group">
+                        <label>Intelligence Score *</label>
+                        <input type="number" id="modelScore" class="input-field" min="0" max="100" placeholder="0-100">
+                    </div>
+                    <div class="form-group">
+                        <label>Cost Index *</label>
+                        <input type="number" id="modelCost" class="input-field" min="0" step="0.01" placeholder="e.g. 145">
+                    </div>
+                    <div class="form-group">
+                        <label>Cost per Point</label>
+                        <input type="number" id="modelCpp" class="input-field" min="0" step="0.01" placeholder="Auto">
+                    </div>
+                </div>
+                <div class="grid-form">
+                    <div class="form-group">
+                        <label>Input ($/M tokens) *</label>
+                        <input type="number" id="modelInput" class="input-field" min="0" step="0.01" placeholder="e.g. 1.25">
+                    </div>
+                    <div class="form-group">
+                        <label>Output ($/M tokens) *</label>
+                        <input type="number" id="modelOutput" class="input-field" min="0" step="0.01" placeholder="e.g. 10">
+                    </div>
+                    <div class="form-group" style="display: flex; align-items: flex-end;">
+                        <button type="button" class="btn btn-success" style="width: 100%;" onclick="addModel()">+ Add Model</button>
+                    </div>
+                </div>
+            </div>
+            
+            <h3 style="margin: 25px 0 15px; font-size: 1rem;">Current Models</h3>
+            <div style="max-height: 350px; overflow-y: auto; border: 1px solid var(--border); border-radius: 8px;">
+                <table>
+                    <thead>
+                        <tr>
+                            <th>Model</th>
+                            <th>Vendor</th>
+                            <th>R</th>
+                            <th>Score</th>
+                            <th>Cost</th>
+                            <th>CPP</th>
+                            <th>In</th>
+                            <th>Out</th>
+                            <th></th>
+                        </tr>
+                    </thead>
+                    <tbody id="modelsTableBody"></tbody>
+                </table>
+            </div>
+            <div class="modal-footer">
+                <button class="btn btn-ghost" onclick="closeDataEditor()">Close</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Add Chart Modal -->
+    <div class="modal-overlay" id="addChartModal">
+        <div class="modal-content" style="max-width: 500px;">
+            <div class="modal-header">
+                <h2>Add New Chart</h2>
+                <button class="btn btn-ghost" onclick="closeAddChart()">✕</button>
+            </div>
+            <div class="form-group">
+                <label>Chart Type</label>
+                <select id="newChartType" class="input-field">
+                    <option value="intelligence">Intelligence Score Ranking</option>
+                    <option value="benchmarkcost">Benchmark Cost (Cost Index)</option>
+                    <option value="combined">Cost vs Intelligence (Dual Axis)</option>
+                    <option value="scatter">Intelligence Score vs Total Cost (Value Map)</option>
+                    <option value="efficiency">Cost Efficiency Ranking (Cost per Intelligence Point)</option>
+                    <option value="reasoning">Reasoning Premium: Intelligence Boost vs Cost Increase</option>
+                    <option value="pricing">API Pricing: Input vs Output Costs</option>
+                    <option disabled>── Value Quadrant Charts ──</option>
+                    <option value="quadrant">Value Quadrant Matrix (All Models)</option>
+                    <option value="bestvalue">Best Value Models (High Intelligence, Low Cost)</option>
+                    <option value="premium">Premium Models (High Intelligence, High Cost)</option>
+                    <option value="budget">Budget Models (Low Intelligence, Low Cost)</option>
+                    <option value="avoid">Avoid Models (Low Intelligence, High Cost)</option>
+                    <option disabled>── Tools ──</option>
+                    <option value="compare">Model Comparison Tool</option>
+                </select>
+            </div>
+            <div class="modal-footer">
+                <button class="btn btn-ghost" onclick="closeAddChart()">Cancel</button>
+                <button class="btn btn-success" onclick="addNewChart()">Add Chart</button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Register datalabels plugin
+        Chart.register(ChartDataLabels);
+        
+        // Set global chart defaults for larger fonts
+        Chart.defaults.font.size = 12;
+        Chart.defaults.font.family = "'Inter', system-ui, -apple-system, sans-serif";
+        Chart.defaults.plugins.legend.labels.font = { size: 12, weight: '500' };
+        Chart.defaults.plugins.tooltip.titleFont = { size: 13, weight: '600' };
+        Chart.defaults.plugins.tooltip.bodyFont = { size: 12 };
+        Chart.defaults.scale.ticks.font = { size: 11 };
+        Chart.defaults.scale.title.font = { size: 12, weight: '600' };
+
+        // Vendor colors - more distinct and vibrant
+        const vendorColors = {
+            'Google': '#4285f4',
+            'xAI': '#1a1a2e',
+            'DeepSeek': '#0066ff',
+            'NVIDIA': '#76b900',
+            'Anthropic': '#d4a574',
+            'Moonshot': '#7c3aed',
+            'OpenAI': '#00a67e',
+            'Z.AI': '#ff3366'
+        };
+        
+        const extraColors = ['#f97316', '#06b6d4', '#ec4899', '#14b8a6', '#f59e0b', '#8b5cf6', '#84cc16', '#ef4444'];
+        
+        function getVendorColor(vendor) {
+            if (vendorColors[vendor]) return vendorColors[vendor];
+            // Assign a new color for unknown vendors
+            const existingCount = Object.keys(vendorColors).length - 8;
+            vendorColors[vendor] = extraColors[existingCount % extraColors.length];
+            return vendorColors[vendor];
+        }
+
+        // Default model data
+        const defaultModels = [
+            { id: 1, name: 'Gemini 2.0 Flash', reasoning: false, score: 34, cost: 7, cpp: 0.21, input: 0.15, output: 0.60, vendor: 'Google' },
+            { id: 2, name: 'Grok 4 Fast', reasoning: false, score: 39, cost: 14, cpp: 0.36, input: 0.20, output: 0.50, vendor: 'xAI' },
+            { id: 3, name: 'Grok 4.1 Fast', reasoning: false, score: 38, cost: 15, cpp: 0.39, input: 0.20, output: 0.50, vendor: 'xAI' },
+            { id: 4, name: 'Grok 4.1 Fast (R)', reasoning: true, score: 64, cost: 45, cpp: 0.70, input: 0.20, output: 0.50, vendor: 'xAI' },
+            { id: 5, name: 'DeepSeek V3.2 (R)', reasoning: true, score: 66, cost: 54, cpp: 0.82, input: 0.30, output: 0.45, vendor: 'DeepSeek' },
+            { id: 6, name: 'NVIDIA Nemotron 3 Nano (R)', reasoning: true, score: 52, cost: 43, cpp: 0.83, input: 0.06, output: 0.24, vendor: 'NVIDIA' },
+            { id: 7, name: 'Gemini 3 Flash', reasoning: false, score: 55, cost: 48, cpp: 0.87, input: 0.50, output: 3.00, vendor: 'Google' },
+            { id: 8, name: 'DeepSeek V3.2 Speciale (R)', reasoning: true, score: 59, cost: 75, cpp: 1.27, input: 0.30, output: 0.45, vendor: 'DeepSeek' },
+            { id: 9, name: 'Gemini 2.5 Flash', reasoning: false, score: 40, cost: 65, cpp: 1.63, input: 0.30, output: 2.50, vendor: 'Google' },
+            { id: 10, name: 'Kimi K2 0905', reasoning: false, score: 50, cost: 108, cpp: 2.16, input: 0.60, output: 2.50, vendor: 'Moonshot' },
+            { id: 11, name: 'Claude 4.5 Haiku', reasoning: false, score: 42, cost: 105, cpp: 2.50, input: 1.00, output: 5.00, vendor: 'Anthropic' },
+            { id: 12, name: 'Grok Code Fast 1 (R)', reasoning: true, score: 49, cost: 139, cpp: 2.84, input: 0.20, output: 1.50, vendor: 'xAI' },
+            { id: 13, name: 'GPT-5.2', reasoning: false, score: 48, cost: 145, cpp: 3.02, input: 1.75, output: 14.00, vendor: 'OpenAI' },
+            { id: 14, name: 'Gemini 2.5 Flash (R)', reasoning: true, score: 54, cost: 192, cpp: 3.56, input: 0.30, output: 2.50, vendor: 'Google' },
+            { id: 15, name: 'GLM-4.6 (R)', reasoning: true, score: 56, cost: 226, cpp: 4.04, input: 0.60, output: 2.20, vendor: 'Z.AI' },
+            { id: 16, name: 'Claude 4.5 Haiku (R)', reasoning: true, score: 55, cost: 262, cpp: 4.76, input: 1.00, output: 5.00, vendor: 'Anthropic' },
+            { id: 17, name: 'Kimi K2 Thinking (R)', reasoning: true, score: 67, cost: 380, cpp: 5.67, input: 0.60, output: 2.50, vendor: 'Moonshot' },
+            { id: 18, name: 'Gemini 3 Pro Preview (low) (R)', reasoning: true, score: 65, cost: 378, cpp: 5.82, input: 2.00, output: 12.00, vendor: 'Google' },
+            { id: 19, name: 'Claude 4.5 Sonnet', reasoning: false, score: 50, cost: 323, cpp: 6.46, input: 3.00, output: 15.00, vendor: 'Anthropic' },
+            { id: 20, name: 'DeepSeek R1 0528 (R)', reasoning: true, score: 52, cost: 382, cpp: 7.35, input: 1.08, output: 3.50, vendor: 'DeepSeek' },
+            { id: 21, name: 'Gemini 3 Flash (R)', reasoning: true, score: 71, cost: 524, cpp: 7.38, input: 0.50, output: 3.00, vendor: 'Google' },
+            { id: 22, name: 'GPT-5.1 Codex (high) (R)', reasoning: true, score: 67, cost: 697, cpp: 10.40, input: 1.25, output: 10.00, vendor: 'OpenAI' },
+            { id: 23, name: 'GPT-5.1 (high) (R)', reasoning: true, score: 70, cost: 859, cpp: 12.27, input: 1.25, output: 10.00, vendor: 'OpenAI' },
+            { id: 24, name: 'Claude 4.5 Sonnet (R)', reasoning: true, score: 63, cost: 817, cpp: 12.97, input: 3.00, output: 15.00, vendor: 'Anthropic' },
+            { id: 25, name: 'Gemini 3 Pro Preview (high) (R)', reasoning: true, score: 73, cost: 1201, cpp: 16.45, input: 2.00, output: 12.00, vendor: 'Google' },
+            { id: 26, name: 'GPT-5.2 (xhigh) (R)', reasoning: true, score: 73, cost: 1294, cpp: 17.73, input: 1.75, output: 14.00, vendor: 'OpenAI' },
+            { id: 27, name: 'Gemini 2.5 Pro (R)', reasoning: true, score: 60, cost: 1068, cpp: 17.80, input: 1.25, output: 10.00, vendor: 'Google' },
+            { id: 28, name: 'Claude Opus 4.5 (R)', reasoning: true, score: 70, cost: 1498, cpp: 21.40, input: 5.00, output: 25.00, vendor: 'Anthropic' },
+            { id: 29, name: 'Claude Opus 4.5', reasoning: false, score: 60, cost: 530, cpp: 8.83, input: 5.00, output: 25.00, vendor: 'Anthropic' }
+        ];
+
+        // Chart configurations
+        const chartTypes = {
+            intelligence: { title: 'Intelligence Score Ranking', type: 'intelligence' },
+            benchmarkcost: { title: 'Benchmark Cost (Cost Index)', type: 'benchmarkcost' },
+            combined: { title: 'Cost vs Intelligence (Dual Axis)', type: 'combined' },
+            scatter: { title: 'Intelligence Score vs Total Cost (Value Map)', type: 'scatter' },
+            efficiency: { title: 'Cost Efficiency Ranking (Cost per Intelligence Point)', type: 'efficiency' },
+            reasoning: { title: 'Reasoning Premium: Intelligence Boost vs Cost Increase', type: 'reasoning' },
+            pricing: { title: 'API Pricing: Input vs Output Costs ($/Million Tokens)', type: 'pricing' },
+            quadrant: { title: 'Value Quadrant Matrix', type: 'quadrant' },
+            bestvalue: { title: 'Best Value Models (High Intelligence, Low Cost)', type: 'bestvalue' },
+            premium: { title: 'Premium Models (High Intelligence, High Cost)', type: 'premium' },
+            budget: { title: 'Budget Models (Low Intelligence, Low Cost)', type: 'budget' },
+            avoid: { title: 'Avoid Models (Low Intelligence, High Cost)', type: 'avoid' },
+            compare: { title: 'Model Comparison', type: 'compare' }
+        };
+        
+        // Default charts configuration
+        const defaultChartTypes = ['intelligence', 'benchmarkcost', 'scatter', 'quadrant', 'efficiency', 'pricing'];
+
+        let allModels = [];
+        let chartInstances = {};
+        let chartSettings = {};
+        let chartCounter = 0;
+        let activeCharts = [];
+
+        // LocalStorage functions
+        function saveToStorage() {
+            localStorage.setItem('aiModelAnalysis_models', JSON.stringify(allModels));
+            localStorage.setItem('aiModelAnalysis_charts', JSON.stringify(activeCharts.map(id => ({
+                id,
+                settings: {
+                    ...chartSettings[id],
+                    selectedModels: chartSettings[id].selectedModels ? Array.from(chartSettings[id].selectedModels) : undefined
+                }
+            }))));
+        }
+
+        function loadFromStorage() {
+            const savedModels = localStorage.getItem('aiModelAnalysis_models');
+            const savedCharts = localStorage.getItem('aiModelAnalysis_charts');
+            
+            if (savedModels) {
+                allModels = JSON.parse(savedModels);
+            } else {
+                allModels = [...defaultModels];
+            }
+            
+            return savedCharts ? JSON.parse(savedCharts) : null;
+        }
+
+        // Reasoning pairs calculation
+        function getReasoningPairs() {
+            const pairs = [];
+            const baseModels = allModels.filter(m => !m.reasoning);
+            
+            baseModels.forEach(base => {
+                const reasoningVersion = allModels.find(m => 
+                    m.reasoning && 
+                    (m.name.includes(base.name) || base.name.includes(m.name.replace(' (R)', '')))
+                );
+                if (reasoningVersion) {
+                    pairs.push({
+                        name: base.name,
+                        base: base.score,
+                        reasoning: reasoningVersion.score,
+                        baseCost: base.cost,
+                        reasoningCost: reasoningVersion.cost,
+                        vendor: base.vendor
+                    });
+                }
+            });
+            
+            // Fallback to hardcoded if no pairs found
+            if (pairs.length === 0) {
+                return [
+                    { name: 'Grok 4.1 Fast', base: 38, reasoning: 64, baseCost: 15, reasoningCost: 45, vendor: 'xAI' },
+                    { name: 'Gemini 2.5 Flash', base: 40, reasoning: 54, baseCost: 65, reasoningCost: 192, vendor: 'Google' },
+                    { name: 'Claude 4.5 Haiku', base: 42, reasoning: 55, baseCost: 105, reasoningCost: 262, vendor: 'Anthropic' },
+                    { name: 'Claude 4.5 Sonnet', base: 50, reasoning: 63, baseCost: 323, reasoningCost: 817, vendor: 'Anthropic' },
+                    { name: 'Gemini 3 Flash', base: 55, reasoning: 71, baseCost: 48, reasoningCost: 524, vendor: 'Google' }
+                ];
+            }
+            return pairs;
+        }
+
+        function createChartSection(typeKey, isClone = false, existingSettings = null) {
+            const config = chartTypes[typeKey];
+            const sectionId = `chart-${typeKey}-${chartCounter++}`;
+            const selectedModels = existingSettings?.selectedModels 
+                ? new Set(existingSettings.selectedModels) 
+                : new Set(allModels.map(m => m.id));
+            const isBarChart = config.type === 'intelligence' || config.type === 'benchmarkcost' || config.type === 'combined' || config.type === 'efficiency' || config.type === 'pricing' || config.type === 'reasoning' || config.type === 'bestvalue' || config.type === 'premium' || config.type === 'budget' || config.type === 'avoid';
+            const isQuadrant = config.type === 'quadrant';
+
+            chartSettings[sectionId] = {
+                orientation: existingSettings?.orientation || 'horizontal',
+                selectedModels: selectedModels,
+                type: config.type,
+                typeKey: typeKey,
+                customTitle: existingSettings?.customTitle || config.title,
+                quadrantScoreThreshold: existingSettings?.quadrantScoreThreshold ?? null,
+                quadrantCostThreshold: existingSettings?.quadrantCostThreshold ?? null
+            };
+
+            const section = document.createElement('div');
+            section.className = 'chart-card';
+            section.id = sectionId;
+            section.innerHTML = `
+                <div class="chart-header">
+                    <div class="chart-title" style="display: flex; align-items: center; gap: 0.5rem;">
+                        <span id="title-text-${sectionId}">${chartSettings[sectionId].customTitle}</span>
+                        ${isClone ? '<span class="cloned-indicator">CLONE</span>' : ''}
+                        <button class="btn-icon" onclick="editChartTitle('${sectionId}')" title="Edit Title" style="padding: 0.25rem;">
+                            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/>
+                                <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/>
+                            </svg>
+                        </button>
+                    </div>
+                    <div class="chart-actions">
+                        <button class="btn btn-ghost" onclick="moveChartUp('${sectionId}')" title="Move Up">
+                            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                <path d="M18 15l-6-6-6 6"/>
+                            </svg>
+                        </button>
+                        <button class="btn btn-ghost" onclick="moveChartDown('${sectionId}')" title="Move Down">
+                            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                <path d="M6 9l6 6 6-6"/>
+                            </svg>
+                        </button>
+                        ${isBarChart ? `
+                        <div class="btn-group">
+                            <button class="btn btn-ghost ${chartSettings[sectionId].orientation === 'horizontal' ? 'active' : ''}" onclick="setOrientation('${sectionId}', 'horizontal', this)">
+                                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                    <rect x="3" y="3" width="18" height="4" rx="1"/>
+                                    <rect x="3" y="10" width="12" height="4" rx="1"/>
+                                    <rect x="3" y="17" width="15" height="4" rx="1"/>
+                                </svg>
+                            </button>
+                            <button class="btn btn-ghost ${chartSettings[sectionId].orientation === 'vertical' ? 'active' : ''}" onclick="setOrientation('${sectionId}', 'vertical', this)">
+                                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                    <rect x="3" y="3" width="4" height="18" rx="1"/>
+                                    <rect x="10" y="8" width="4" height="13" rx="1"/>
+                                    <rect x="17" y="5" width="4" height="16" rx="1"/>
+                                </svg>
+                            </button>
+                        </div>
+                        ` : ''}
+                        <button class="btn btn-ghost" onclick="toggleSelector('${sectionId}')">
+                            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                <circle cx="12" cy="12" r="3"/>
+                                <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"/>
+                            </svg>
+                            Models
+                        </button>
+                        ${isQuadrant ? `
+                        <button class="btn btn-ghost" onclick="toggleQuadrantControls('${sectionId}')">
+                            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                <line x1="4" y1="21" x2="4" y2="14"/>
+                                <line x1="4" y1="10" x2="4" y2="3"/>
+                                <line x1="12" y1="21" x2="12" y2="12"/>
+                                <line x1="12" y1="8" x2="12" y2="3"/>
+                                <line x1="20" y1="21" x2="20" y2="16"/>
+                                <line x1="20" y1="12" x2="20" y2="3"/>
+                                <line x1="1" y1="14" x2="7" y2="14"/>
+                                <line x1="9" y1="8" x2="15" y2="8"/>
+                                <line x1="17" y1="16" x2="23" y2="16"/>
+                            </svg>
+                            Thresholds
+                        </button>
+                        ` : ''}
+                        <button class="btn btn-ghost" onclick="showExportMenu('${sectionId}', this)" title="Export as Image">
+                            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>
+                                <polyline points="7,10 12,15 17,10"/>
+                                <line x1="12" y1="15" x2="12" y2="3"/>
+                            </svg>
+                            Export
+                        </button>
+                        <button class="btn btn-clone" onclick="cloneChart('${sectionId}')">
+                            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                <rect x="9" y="9" width="13" height="13" rx="2" ry="2"/>
+                                <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/>
+                            </svg>
+                            Clone
+                        </button>
+                        <button class="btn btn-danger" onclick="removeChart('${sectionId}')">
+                            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                <line x1="18" y1="6" x2="6" y2="18"/>
+                                <line x1="6" y1="6" x2="18" y2="18"/>
+                            </svg>
+                        </button>
+                    </div>
+                </div>
+                <div class="model-selector" id="selector-${sectionId}">
+                    <div class="model-selector-header">
+                        <span class="model-selector-title">Select models to display:</span>
+                        <div class="model-selector-actions">
+                            <button class="btn btn-ghost" onclick="selectAll('${sectionId}', true)">Select All</button>
+                            <button class="btn btn-ghost" onclick="selectAll('${sectionId}', false)">Deselect All</button>
+                            <button class="btn btn-primary" onclick="applySelection('${sectionId}')">Apply</button>
+                        </div>
+                    </div>
+                    <div class="legend-vendor">
+                        ${[...new Set(allModels.map(m => m.vendor))].sort().map(vendor => `
+                            <div class="legend-item">
+                                <div class="vendor-dot" style="background: ${getVendorColor(vendor)}"></div>
+                                ${vendor}
+                            </div>
+                        `).join('')}
+                    </div>
+                    <div class="model-pill-grid" id="models-${sectionId}">
+                        ${[...allModels].sort((a, b) => a.name.localeCompare(b.name)).map(m => `
+                            <label class="model-pill ${selectedModels.has(m.id) ? 'active' : ''}" data-model-id="${m.id}">
+                                <input type="checkbox" ${selectedModels.has(m.id) ? 'checked' : ''} onchange="toggleModelItem(this)">
+                                <div class="vendor-dot" style="background: ${getVendorColor(m.vendor)}"></div>
+                                <span>${m.name}</span>
+                            </label>
+                        `).join('')}
+                    </div>
+                </div>
+                ${isQuadrant ? `
+                <div class="quadrant-controls" id="quadrant-controls-${sectionId}" style="display: none; padding: 1rem; background: #f8fafc; border-radius: 8px; margin-bottom: 1rem;">
+                    <div style="display: flex; align-items: center; gap: 1.5rem; flex-wrap: wrap;">
+                        <span style="font-weight: 600; font-size: 0.875rem;">Quadrant Thresholds:</span>
+                        <div style="display: flex; align-items: center; gap: 0.5rem;">
+                            <label style="font-size: 0.8rem; color: #64748b;">Score Line:</label>
+                            <input type="number" id="score-threshold-${sectionId}" class="input-field" style="width: 80px; padding: 0.25rem 0.5rem;" placeholder="Auto" min="0" max="100" onchange="updateQuadrantThresholds('${sectionId}')">
+                        </div>
+                        <div style="display: flex; align-items: center; gap: 0.5rem;">
+                            <label style="font-size: 0.8rem; color: #64748b;">Cost Line:</label>
+                            <input type="number" id="cost-threshold-${sectionId}" class="input-field" style="width: 80px; padding: 0.25rem 0.5rem;" placeholder="Auto" min="0" onchange="updateQuadrantThresholds('${sectionId}')">
+                        </div>
+                        <button class="btn btn-ghost" onclick="resetQuadrantThresholds('${sectionId}')" style="font-size: 0.8rem; padding: 0.25rem 0.75rem;">Reset to Auto</button>
+                    </div>
+                </div>
+                ` : ''}
+                <div class="chart-viewport ${chartSettings[sectionId].orientation === 'vertical' ? 'vertical' : ''}" id="container-${sectionId}">
+                    <canvas id="canvas-${sectionId}"></canvas>
+                </div>
+            `;
+
+            return { section, sectionId, selectedModels };
+        }
+
+        function createCompareSection(existingSettings = null) {
+            const sectionId = `chart-compare-${chartCounter++}`;
+            
+            const defaultMetrics = ['score', 'cost', 'cpp', 'input', 'output'];
+            
+            chartSettings[sectionId] = {
+                type: 'compare',
+                typeKey: 'compare',
+                customTitle: existingSettings?.customTitle || 'Model Comparison',
+                compareModelA: existingSettings?.compareModelA || null,
+                compareModelB: existingSettings?.compareModelB || null,
+                compareMetrics: existingSettings?.compareMetrics || defaultMetrics
+            };
+
+            const sortedModels = [...allModels].sort((a, b) => a.name.localeCompare(b.name));
+            const modelOptions = sortedModels.map(m => `<option value="${m.id}">${m.name} (${m.vendor})</option>`).join('');
+
+            const section = document.createElement('div');
+            section.className = 'chart-card';
+            section.id = sectionId;
+            section.innerHTML = `
+                <div class="chart-header">
+                    <div class="chart-title" style="display: flex; align-items: center; gap: 0.5rem;">
+                        <span id="title-text-${sectionId}">${chartSettings[sectionId].customTitle}</span>
+                        <button class="btn-icon" onclick="editChartTitle('${sectionId}')" title="Edit Title" style="padding: 0.25rem;">
+                            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/>
+                                <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/>
+                            </svg>
+                        </button>
+                    </div>
+                    <div class="chart-actions">
+                        <button class="btn btn-ghost" onclick="moveChartUp('${sectionId}')" title="Move Up">
+                            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                <path d="M18 15l-6-6-6 6"/>
+                            </svg>
+                        </button>
+                        <button class="btn btn-ghost" onclick="moveChartDown('${sectionId}')" title="Move Down">
+                            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                <path d="M6 9l6 6 6-6"/>
+                            </svg>
+                        </button>
+                        <button class="btn btn-ghost" onclick="toggleCompareSettings('${sectionId}')">
+                            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                <circle cx="12" cy="12" r="3"/>
+                                <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"/>
+                            </svg>
+                            Settings
+                        </button>
+                        <button class="btn btn-ghost" onclick="showExportMenu('${sectionId}', this)" title="Export as Image">
+                            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>
+                                <polyline points="7,10 12,15 17,10"/>
+                                <line x1="12" y1="15" x2="12" y2="3"/>
+                            </svg>
+                            Export
+                        </button>
+                        <button class="btn btn-danger" onclick="removeChart('${sectionId}')">
+                            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                <line x1="18" y1="6" x2="6" y2="18"/>
+                                <line x1="6" y1="6" x2="18" y2="18"/>
+                            </svg>
+                        </button>
+                    </div>
+                </div>
+                <div id="compare-settings-${sectionId}" style="display: none; padding: 1rem; background: #f8fafc; border-bottom: 1px solid #e2e8f0;">
+                    <div style="display: flex; gap: 2rem; flex-wrap: wrap;">
+                        <div>
+                            <label style="display: block; font-size: 0.7rem; font-weight: 600; color: #64748b; margin-bottom: 0.5rem; text-transform: uppercase;">Select Models</label>
+                            <div style="display: flex; gap: 1rem; align-items: center; flex-wrap: wrap;">
+                                <select id="compareA-${sectionId}" class="input-field" style="min-width: 200px;" onchange="updateCompareSection('${sectionId}')">
+                                    <option value="">Model A...</option>
+                                    ${modelOptions}
+                                </select>
+                                <button class="btn btn-ghost" onclick="swapCompareModels('${sectionId}')" title="Swap models" style="padding: 0.5rem; min-width: auto;">
+                                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                        <path d="M7 16l-4-4 4-4"/>
+                                        <path d="M17 8l4 4-4 4"/>
+                                        <path d="M3 12h18"/>
+                                    </svg>
+                                </button>
+                                <select id="compareB-${sectionId}" class="input-field" style="min-width: 200px;" onchange="updateCompareSection('${sectionId}')">
+                                    <option value="">Model B...</option>
+                                    ${modelOptions}
+                                </select>
+                            </div>
+                        </div>
+                        <div>
+                            <label style="display: block; font-size: 0.7rem; font-weight: 600; color: #64748b; margin-bottom: 0.5rem; text-transform: uppercase;">Compare Metrics</label>
+                            <div style="display: flex; gap: 1rem; flex-wrap: wrap;">
+                                <label style="display: flex; align-items: center; gap: 0.375rem; cursor: pointer; font-size: 0.875rem;">
+                                    <input type="checkbox" id="metric-score-${sectionId}" checked onchange="updateCompareSection('${sectionId}')">
+                                    Intelligence Score
+                                </label>
+                                <label style="display: flex; align-items: center; gap: 0.375rem; cursor: pointer; font-size: 0.875rem;">
+                                    <input type="checkbox" id="metric-cost-${sectionId}" checked onchange="updateCompareSection('${sectionId}')">
+                                    Cost Index
+                                </label>
+                                <label style="display: flex; align-items: center; gap: 0.375rem; cursor: pointer; font-size: 0.875rem;">
+                                    <input type="checkbox" id="metric-cpp-${sectionId}" checked onchange="updateCompareSection('${sectionId}')">
+                                    Cost per Point
+                                </label>
+                                <label style="display: flex; align-items: center; gap: 0.375rem; cursor: pointer; font-size: 0.875rem;">
+                                    <input type="checkbox" id="metric-input-${sectionId}" checked onchange="updateCompareSection('${sectionId}')">
+                                    Input $/M
+                                </label>
+                                <label style="display: flex; align-items: center; gap: 0.375rem; cursor: pointer; font-size: 0.875rem;">
+                                    <input type="checkbox" id="metric-output-${sectionId}" checked onchange="updateCompareSection('${sectionId}')">
+                                    Output $/M
+                                </label>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <div style="padding: 1rem;" id="compare-content-${sectionId}">
+                    <div id="compare-result-${sectionId}">
+                        <div style="text-align: center; padding: 2rem; color: #94a3b8;">
+                            <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" style="margin: 0 auto 1rem;">
+                                <line x1="18" y1="20" x2="18" y2="10"/>
+                                <line x1="12" y1="20" x2="12" y2="4"/>
+                                <line x1="6" y1="20" x2="6" y2="14"/>
+                            </svg>
+                            <p>Click "Settings" to select models to compare</p>
+                        </div>
+                    </div>
+                </div>
+            `;
+
+            // Restore saved selections if they exist
+            if (existingSettings?.compareModelA || existingSettings?.compareModelB) {
+                setTimeout(() => {
+                    const selectA = document.getElementById(`compareA-${sectionId}`);
+                    const selectB = document.getElementById(`compareB-${sectionId}`);
+                    if (selectA && existingSettings.compareModelA) selectA.value = existingSettings.compareModelA;
+                    if (selectB && existingSettings.compareModelB) selectB.value = existingSettings.compareModelB;
+                    
+                    if (existingSettings?.compareMetrics) {
+                        ['score', 'cost', 'cpp', 'input', 'output'].forEach(m => {
+                            const checkbox = document.getElementById(`metric-${m}-${sectionId}`);
+                            if (checkbox) checkbox.checked = existingSettings.compareMetrics.includes(m);
+                        });
+                    }
+                    
+                    updateCompareSection(sectionId);
+                }, 10);
+            }
+
+            return { section, sectionId };
+        }
+
+        function toggleCompareSettings(sectionId) {
+            const settingsDiv = document.getElementById(`compare-settings-${sectionId}`);
+            if (settingsDiv) {
+                settingsDiv.style.display = settingsDiv.style.display === 'none' ? 'block' : 'none';
+            }
+        }
+        
+        function swapCompareModels(sectionId) {
+            const selectA = document.getElementById(`compareA-${sectionId}`);
+            const selectB = document.getElementById(`compareB-${sectionId}`);
+            
+            if (selectA && selectB) {
+                const tempValue = selectA.value;
+                selectA.value = selectB.value;
+                selectB.value = tempValue;
+                updateCompareSection(sectionId);
+            }
+        }
+
+        function updateCompareSection(sectionId) {
+            const modelAId = parseInt(document.getElementById(`compareA-${sectionId}`)?.value);
+            const modelBId = parseInt(document.getElementById(`compareB-${sectionId}`)?.value);
+            
+            // Get selected metrics
+            const selectedMetrics = [];
+            ['score', 'cost', 'cpp', 'input', 'output'].forEach(m => {
+                if (document.getElementById(`metric-${m}-${sectionId}`)?.checked) {
+                    selectedMetrics.push(m);
+                }
+            });
+            
+            // Save to settings
+            chartSettings[sectionId].compareModelA = modelAId || null;
+            chartSettings[sectionId].compareModelB = modelBId || null;
+            chartSettings[sectionId].compareMetrics = selectedMetrics;
+            saveToStorage();
+            
+            const resultDiv = document.getElementById(`compare-result-${sectionId}`);
+            
+            if (!modelAId || !modelBId || modelAId === modelBId || selectedMetrics.length === 0) {
+                resultDiv.innerHTML = `
+                    <div style="text-align: center; padding: 2rem; color: #94a3b8;">
+                        <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" style="margin: 0 auto 1rem;">
+                            <line x1="18" y1="20" x2="18" y2="10"/>
+                            <line x1="12" y1="20" x2="12" y2="4"/>
+                            <line x1="6" y1="20" x2="6" y2="14"/>
+                        </svg>
+                        <p>${selectedMetrics.length === 0 ? 'Select at least one metric' : 'Select two different models to compare'}</p>
+                    </div>
+                `;
+                return;
+            }
+            
+            const modelA = allModels.find(m => m.id === modelAId);
+            const modelB = allModels.find(m => m.id === modelBId);
+            
+            if (!modelA || !modelB) return;
+            
+            const metricsConfig = {
+                score: { label: 'Intelligence Score', format: v => v, unit: 'pts', higherBetter: true },
+                cost: { label: 'Cost Index', format: v => `$${v}`, unit: '', higherBetter: false },
+                cpp: { label: 'Cost per Point', format: v => `$${v.toFixed(2)}`, unit: '', higherBetter: false },
+                input: { label: 'Input ($/M tokens)', format: v => `$${v.toFixed(2)}`, unit: '', higherBetter: false },
+                output: { label: 'Output ($/M tokens)', format: v => `$${v.toFixed(2)}`, unit: '', higherBetter: false }
+            };
+            
+            let tableRows = '';
+            let summaryPoints = [];
+            
+            selectedMetrics.forEach(key => {
+                const m = metricsConfig[key];
+                const valueA = modelA[key];
+                const valueB = modelB[key];
+                const diff = valueA - valueB;
+                const pctDiff = valueB !== 0 ? ((valueA - valueB) / valueB * 100) : 0;
+                
+                let diffText = '';
+                let aWins = false;
+                let bWins = false;
+                
+                if (diff !== 0) {
+                    const absDiff = Math.abs(diff);
+                    const absPct = Math.abs(pctDiff);
+                    
+                    if (m.higherBetter) {
+                        // For Intelligence Score - show only points, no percentage
+                        if (diff > 0) {
+                            diffText = `<span style="color: #10b981; font-weight: 600;">▲ +${absDiff} ${m.unit}</span>`;
+                            aWins = true;
+                        } else {
+                            diffText = `<span style="color: #ef4444; font-weight: 600;">▼ -${absDiff} ${m.unit}</span>`;
+                            bWins = true;
+                        }
+                    } else {
+                        if (diff < 0) {
+                            diffText = `<span style="color: #10b981; font-weight: 600;">▼ ${m.format(absDiff)} cheaper (${absPct.toFixed(1)}%)</span>`;
+                            aWins = true;
+                        } else {
+                            diffText = `<span style="color: #ef4444; font-weight: 600;">▲ ${m.format(absDiff)} more expensive (+${absPct.toFixed(1)}%)</span>`;
+                            bWins = true;
+                        }
+                    }
+                } else {
+                    diffText = '<span style="color: #64748b;">Same</span>';
+                }
+                
+                const aStyle = aWins ? 'background: #ecfdf5; font-weight: 700; color: #059669;' : '';
+                const bStyle = bWins ? 'background: #ecfdf5; font-weight: 700; color: #059669;' : '';
+                
+                tableRows += `
+                    <tr style="border-bottom: 1px solid #e2e8f0;">
+                        <td style="padding: 0.75rem; color: #475569; font-weight: 500;">${m.label}</td>
+                        <td style="text-align: center; padding: 0.75rem; ${aStyle}">${m.format(valueA)}</td>
+                        <td style="text-align: center; padding: 0.75rem; ${bStyle}">${m.format(valueB)}</td>
+                        <td style="text-align: center; padding: 0.75rem;">${diffText}</td>
+                    </tr>
+                `;
+                
+                // Build summary
+                if (key === 'score' && diff !== 0) {
+                    const winner = diff > 0 ? modelA.name : modelB.name;
+                    const loser = diff > 0 ? modelB.name : modelA.name;
+                    summaryPoints.push(`<strong>${winner}</strong> is <span style="color: #10b981; font-weight: 700;">${Math.abs(diff)} points smarter</span> than ${loser}`);
+                }
+                if (key === 'cost' && diff !== 0) {
+                    const cheaper = diff < 0 ? modelA.name : modelB.name;
+                    const expensive = diff < 0 ? modelB.name : modelA.name;
+                    const savings = Math.abs(diff);
+                    const savingsPct = Math.abs(pctDiff);
+                    summaryPoints.push(`<strong>${cheaper}</strong> is <span style="color: #10b981; font-weight: 700;">$${savings} (${savingsPct.toFixed(1)}%) cheaper</span> than ${expensive}`);
+                }
+            });
+            
+            const summaryHTML = summaryPoints.length > 0 
+                ? '<div style="margin-top: 1rem; padding: 1rem; background: linear-gradient(135deg, #f0fdf4 0%, #ecfdf5 100%); border-radius: 8px; border-left: 4px solid #10b981;"><strong style="color: #047857;">Key Insights:</strong><ul style="margin: 0.5rem 0 0 1.25rem; padding: 0;">' + summaryPoints.map(p => `<li style="margin: 0.25rem 0;">${p}</li>`).join('') + '</ul></div>'
+                : '';
+            
+            resultDiv.innerHTML = `
+                <table style="width: 100%; border-collapse: collapse; font-size: 0.875rem;">
+                    <thead>
+                        <tr style="border-bottom: 2px solid #e2e8f0; background: #f8fafc;">
+                            <th style="text-align: left; padding: 0.75rem; color: #64748b; font-weight: 600;">Metric</th>
+                            <th style="text-align: center; padding: 0.75rem; color: #0891b2; font-weight: 700;">${modelA.name}</th>
+                            <th style="text-align: center; padding: 0.75rem; color: #0891b2; font-weight: 700;">${modelB.name}</th>
+                            <th style="text-align: center; padding: 0.75rem; color: #64748b; font-weight: 600;">Difference (A vs B)</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        ${tableRows}
+                    </tbody>
+                </table>
+                ${summaryHTML}
+            `;
+        }
+
+        function setOrientation(sectionId, orientation, btn) {
+            chartSettings[sectionId].orientation = orientation;
+            
+            const btnGroup = btn.parentElement;
+            btnGroup.querySelectorAll('.btn').forEach(b => b.classList.remove('active'));
+            btn.classList.add('active');
+
+            const container = document.getElementById(`container-${sectionId}`);
+            container.classList.toggle('vertical', orientation === 'vertical');
+
+            renderChart(sectionId, chartSettings[sectionId].type, chartSettings[sectionId].selectedModels);
+            saveToStorage();
+        }
+
+        function toggleQuadrantControls(sectionId) {
+            const controls = document.getElementById(`quadrant-controls-${sectionId}`);
+            if (controls) {
+                const isVisible = controls.style.display !== 'none';
+                controls.style.display = isVisible ? 'none' : 'block';
+                
+                // Populate current values if showing
+                if (!isVisible) {
+                    const scoreInput = document.getElementById(`score-threshold-${sectionId}`);
+                    const costInput = document.getElementById(`cost-threshold-${sectionId}`);
+                    if (chartSettings[sectionId].quadrantScoreThreshold) {
+                        scoreInput.value = chartSettings[sectionId].quadrantScoreThreshold;
+                    }
+                    if (chartSettings[sectionId].quadrantCostThreshold) {
+                        costInput.value = chartSettings[sectionId].quadrantCostThreshold;
+                    }
+                }
+            }
+        }
+
+        function updateQuadrantThresholds(sectionId) {
+            const scoreInput = document.getElementById(`score-threshold-${sectionId}`);
+            const costInput = document.getElementById(`cost-threshold-${sectionId}`);
+            
+            const scoreVal = scoreInput.value ? parseFloat(scoreInput.value) : null;
+            const costVal = costInput.value ? parseFloat(costInput.value) : null;
+            
+            chartSettings[sectionId].quadrantScoreThreshold = scoreVal;
+            chartSettings[sectionId].quadrantCostThreshold = costVal;
+            
+            renderChart(sectionId, chartSettings[sectionId].type, chartSettings[sectionId].selectedModels);
+            saveToStorage();
+        }
+
+        function resetQuadrantThresholds(sectionId) {
+            chartSettings[sectionId].quadrantScoreThreshold = null;
+            chartSettings[sectionId].quadrantCostThreshold = null;
+            
+            document.getElementById(`score-threshold-${sectionId}`).value = '';
+            document.getElementById(`cost-threshold-${sectionId}`).value = '';
+            
+            renderChart(sectionId, chartSettings[sectionId].type, chartSettings[sectionId].selectedModels);
+            saveToStorage();
+        }
+
+        function editChartTitle(sectionId) {
+            const titleSpan = document.getElementById(`title-text-${sectionId}`);
+            const currentTitle = chartSettings[sectionId].customTitle;
+            
+            // Create inline input
+            const input = document.createElement('input');
+            input.type = 'text';
+            input.value = currentTitle;
+            input.className = 'input-field';
+            input.style.cssText = 'font-size: 1.1rem; font-weight: 700; padding: 0.25rem 0.5rem; width: auto; min-width: 200px;';
+            
+            // Replace span with input
+            titleSpan.style.display = 'none';
+            titleSpan.parentNode.insertBefore(input, titleSpan);
+            input.focus();
+            input.select();
+            
+            // Flag to prevent double execution
+            let saved = false;
+            
+            // Save on blur or Enter
+            const saveTitle = () => {
+                if (saved) return;
+                saved = true;
+                
+                const newTitle = input.value.trim();
+                if (newTitle !== '') {
+                    chartSettings[sectionId].customTitle = newTitle;
+                    titleSpan.textContent = newTitle;
+                    saveToStorage();
+                }
+                titleSpan.style.display = '';
+                if (input.parentNode) {
+                    input.remove();
+                }
+            };
+            
+            input.addEventListener('blur', saveTitle);
+            input.addEventListener('keydown', (e) => {
+                if (e.key === 'Enter') {
+                    e.preventDefault();
+                    input.blur();
+                }
+                if (e.key === 'Escape') {
+                    saved = true;
+                    titleSpan.style.display = '';
+                    if (input.parentNode) {
+                        input.remove();
+                    }
+                }
+            });
+        }
+
+        function renderChart(sectionId, type, selectedModelIds) {
+            const canvas = document.getElementById(`canvas-${sectionId}`);
+            const ctx = canvas.getContext('2d');
+            const settings = chartSettings[sectionId];
+
+            if (chartInstances[sectionId]) {
+                chartInstances[sectionId].destroy();
+            }
+
+            const filteredModels = allModels.filter(m => selectedModelIds.has(m.id));
+
+            if (type === 'intelligence') {
+                const sorted = [...filteredModels].sort((a, b) => b.score - a.score);
+                const isHorizontal = settings.orientation === 'horizontal';
+                
+                chartInstances[sectionId] = new Chart(ctx, {
+                    type: 'bar',
+                    data: {
+                        labels: sorted.map(m => m.name),
+                        datasets: [{
+                            label: 'Intelligence Score',
+                            data: sorted.map(m => m.score),
+                            backgroundColor: sorted.map(m => getVendorColor(m.vendor)),
+                            borderRadius: 4
+                        }]
+                    },
+                    options: {
+                        indexAxis: isHorizontal ? 'y' : 'x',
+                        responsive: true,
+                        maintainAspectRatio: false,
+                        plugins: { 
+                            legend: { display: false },
+                            datalabels: {
+                                anchor: isHorizontal ? 'end' : 'end',
+                                align: isHorizontal ? 'right' : 'top',
+                                formatter: (value) => value,
+                                font: { size: 12, weight: '600' },
+                                color: '#475569'
+                            }
+                        },
+                        scales: {
+                            x: { 
+                                title: { display: !isHorizontal, text: 'Intelligence Score' }, 
+                                grid: { color: isHorizontal ? 'transparent' : '#e2e8f0' },
+                                ticks: isHorizontal ? {} : { maxRotation: 45, font: { size: 13 } },
+                                max: 100
+                            },
+                            y: { 
+                                grid: { display: !isHorizontal, color: '#e2e8f0' }, 
+                                ticks: { font: { size: 13 } },
+                                max: isHorizontal ? undefined : 100
+                            }
+                        }
+                    }
+                });
+            } else if (type === 'benchmarkcost') {
+                const sorted = [...filteredModels].sort((a, b) => a.cost - b.cost);
+                const isHorizontal = settings.orientation === 'horizontal';
+                
+                chartInstances[sectionId] = new Chart(ctx, {
+                    type: 'bar',
+                    data: {
+                        labels: sorted.map(m => m.name),
+                        datasets: [{
+                            label: 'Cost Index',
+                            data: sorted.map(m => m.cost),
+                            backgroundColor: sorted.map(m => getVendorColor(m.vendor)),
+                            borderRadius: 4
+                        }]
+                    },
+                    options: {
+                        indexAxis: isHorizontal ? 'y' : 'x',
+                        responsive: true,
+                        maintainAspectRatio: false,
+                        plugins: { 
+                            legend: { display: false },
+                            datalabels: {
+                                anchor: isHorizontal ? 'end' : 'end',
+                                align: isHorizontal ? 'right' : 'top',
+                                formatter: (value) => `$${value}`,
+                                font: { size: 12, weight: '600' },
+                                color: '#475569'
+                            }
+                        },
+                        scales: {
+                            x: { 
+                                title: { display: !isHorizontal, text: 'Cost Index ($)' }, 
+                                grid: { color: isHorizontal ? 'transparent' : '#e2e8f0' },
+                                ticks: isHorizontal ? {} : { maxRotation: 45, font: { size: 13 } }
+                            },
+                            y: { 
+                                grid: { display: !isHorizontal, color: '#e2e8f0' }, 
+                                ticks: { font: { size: 13 } } 
+                            }
+                        }
+                    }
+                });
+            } else if (type === 'combined') {
+                // Combined Cost vs Intelligence with dual Y-axis (vertical only for dual axis clarity)
+                const sorted = [...filteredModels].sort((a, b) => a.cost - b.cost);
+                const isHorizontal = settings.orientation === 'horizontal';
+                
+                if (isHorizontal) {
+                    // Horizontal mode: use xAxisID for dual axes
+                    chartInstances[sectionId] = new Chart(ctx, {
+                        type: 'bar',
+                        data: {
+                            labels: sorted.map(m => m.name),
+                            datasets: [
+                                {
+                                    label: 'Cost Index ($)',
+                                    data: sorted.map(m => m.cost),
+                                    backgroundColor: sorted.map(m => getVendorColor(m.vendor) + '70'),
+                                    borderColor: sorted.map(m => getVendorColor(m.vendor)),
+                                    borderWidth: 1,
+                                    borderRadius: 4,
+                                    xAxisID: 'xCost'
+                                },
+                                {
+                                    label: 'Intelligence Score',
+                                    data: sorted.map(m => m.score),
+                                    backgroundColor: sorted.map(m => getVendorColor(m.vendor)),
+                                    borderColor: sorted.map(m => getVendorColor(m.vendor)),
+                                    borderWidth: 2,
+                                    borderRadius: 4,
+                                    xAxisID: 'xScore'
+                                }
+                            ]
+                        },
+                        options: {
+                            indexAxis: 'y',
+                            responsive: true,
+                            maintainAspectRatio: false,
+                            plugins: { 
+                                legend: { position: 'top' },
+                                datalabels: { display: false }
+                            },
+                            scales: {
+                                y: { 
+                                    ticks: { font: { size: 11 } }
+                                },
+                                xCost: {
+                                    type: 'linear',
+                                    position: 'bottom',
+                                    title: { display: true, text: 'Cost Index ($)', color: '#64748b', font: { weight: '600' } },
+                                    grid: { color: '#e2e8f0' },
+                                    min: 0
+                                },
+                                xScore: {
+                                    type: 'linear',
+                                    position: 'top',
+                                    title: { display: true, text: 'Intelligence Score', color: '#1e293b', font: { weight: '600' } },
+                                    grid: { display: false },
+                                    min: 0,
+                                    max: 100
+                                }
+                            }
+                        }
+                    });
+                } else {
+                    // Vertical mode: use yAxisID for dual axes
+                    chartInstances[sectionId] = new Chart(ctx, {
+                        type: 'bar',
+                        data: {
+                            labels: sorted.map(m => m.name),
+                            datasets: [
+                                {
+                                    label: 'Cost Index ($)',
+                                    data: sorted.map(m => m.cost),
+                                    backgroundColor: sorted.map(m => getVendorColor(m.vendor) + '70'),
+                                    borderColor: sorted.map(m => getVendorColor(m.vendor)),
+                                    borderWidth: 1,
+                                    borderRadius: 4,
+                                    yAxisID: 'yCost'
+                                },
+                                {
+                                    label: 'Intelligence Score',
+                                    data: sorted.map(m => m.score),
+                                    backgroundColor: sorted.map(m => getVendorColor(m.vendor)),
+                                    borderColor: sorted.map(m => getVendorColor(m.vendor)),
+                                    borderWidth: 2,
+                                    borderRadius: 4,
+                                    yAxisID: 'yScore'
+                                }
+                            ]
+                        },
+                        options: {
+                            indexAxis: 'x',
+                            responsive: true,
+                            maintainAspectRatio: false,
+                            plugins: { 
+                                legend: { position: 'top' },
+                                datalabels: { display: false }
+                            },
+                            scales: {
+                                x: { 
+                                    ticks: { maxRotation: 45, font: { size: 10 } }
+                                },
+                                yCost: {
+                                    type: 'linear',
+                                    position: 'left',
+                                    title: { display: true, text: 'Cost Index ($)', color: '#64748b', font: { weight: '600' } },
+                                    grid: { color: '#e2e8f0' },
+                                    min: 0
+                                },
+                                yScore: {
+                                    type: 'linear',
+                                    position: 'right',
+                                    title: { display: true, text: 'Intelligence Score', color: '#1e293b', font: { weight: '600' } },
+                                    grid: { display: false },
+                                    min: 0,
+                                    max: 100
+                                }
+                            }
+                        }
+                    });
+                }
+            } else if (type === 'scatter') {
+                const vendors = [...new Set(filteredModels.map(m => m.vendor))];
+                chartInstances[sectionId] = new Chart(ctx, {
+                    type: 'scatter',
+                    data: {
+                        datasets: vendors.map(vendor => ({
+                            label: vendor,
+                            data: filteredModels.filter(m => m.vendor === vendor).map(m => ({
+                                x: m.cost,
+                                y: m.score,
+                                name: m.reasoning && !m.name.includes('(R)') ? `${m.name} (R)` : m.name,
+                                reasoning: m.reasoning
+                            })),
+                            backgroundColor: getVendorColor(vendor),
+                            borderColor: getVendorColor(vendor),
+                            pointRadius: 8,
+                            pointHoverRadius: 10
+                        }))
+                    },
+                    options: {
+                        responsive: true,
+                        maintainAspectRatio: false,
+                        plugins: {
+                            tooltip: {
+                                callbacks: {
+                                    label: (ctx) => {
+                                        const d = ctx.raw;
+                                        return `${d.name}: Score ${d.y}, Cost $${d.x}`;
+                                    }
+                                }
+                            },
+                            legend: { position: 'top' },
+                            datalabels: {
+                                align: 'top',
+                                anchor: 'end',
+                                offset: 4,
+                                font: (ctx) => {
+                                    const chart = ctx.chart;
+                                    const activeElements = chart.getActiveElements();
+                                    const isHovered = activeElements.some(el => 
+                                        el.datasetIndex === ctx.datasetIndex && el.index === ctx.dataIndex
+                                    );
+                                    return {
+                                        size: isHovered ? 12 : 10,
+                                        weight: isHovered ? '700' : '500'
+                                    };
+                                },
+                                color: (ctx) => {
+                                    const chart = ctx.chart;
+                                    const activeElements = chart.getActiveElements();
+                                    const isHovered = activeElements.some(el => 
+                                        el.datasetIndex === ctx.datasetIndex && el.index === ctx.dataIndex
+                                    );
+                                    return isHovered ? '#1e293b' : '#475569';
+                                },
+                                backgroundColor: (ctx) => {
+                                    const chart = ctx.chart;
+                                    const activeElements = chart.getActiveElements();
+                                    const isHovered = activeElements.some(el => 
+                                        el.datasetIndex === ctx.datasetIndex && el.index === ctx.dataIndex
+                                    );
+                                    return isHovered ? 'rgba(255,255,255,0.95)' : 'transparent';
+                                },
+                                borderColor: (ctx) => {
+                                    const chart = ctx.chart;
+                                    const activeElements = chart.getActiveElements();
+                                    const isHovered = activeElements.some(el => 
+                                        el.datasetIndex === ctx.datasetIndex && el.index === ctx.dataIndex
+                                    );
+                                    return isHovered ? '#1e293b' : 'transparent';
+                                },
+                                borderWidth: 1,
+                                borderRadius: 4,
+                                padding: { top: 2, bottom: 2, left: 4, right: 4 },
+                                formatter: (value) => value.name || '',
+                                display: (ctx) => ctx.dataset.data.length > 0
+                            }
+                        },
+                        scales: {
+                            x: { title: { display: true, text: 'Total Cost Index' }, grid: { color: '#e2e8f0' } },
+                            y: { title: { display: true, text: 'Intelligence Score' }, grid: { color: '#e2e8f0' } }
+                        },
+                        onHover: (event, elements, chart) => {
+                            chart.update('none');
+                        }
+                    }
+                });
+            } else if (type === 'efficiency') {
+                const sorted = [...filteredModels].sort((a, b) => a.cpp - b.cpp);
+                const isHorizontal = settings.orientation === 'horizontal';
+                
+                chartInstances[sectionId] = new Chart(ctx, {
+                    type: 'bar',
+                    data: {
+                        labels: sorted.map(m => m.reasoning ? `💡 ${m.name}` : m.name),
+                        datasets: [{
+                            label: 'Cost per Intelligence Point',
+                            data: sorted.map(m => m.cpp),
+                            backgroundColor: sorted.map(m => getVendorColor(m.vendor)),
+                            borderRadius: 4
+                        }]
+                    },
+                    options: {
+                        indexAxis: isHorizontal ? 'y' : 'x',
+                        responsive: true,
+                        maintainAspectRatio: false,
+                        plugins: { 
+                            legend: { display: false },
+                            datalabels: {
+                                anchor: isHorizontal ? 'end' : 'end',
+                                align: isHorizontal ? 'right' : 'top',
+                                formatter: (value) => `$${value.toFixed(2)}`,
+                                font: { size: 12, weight: '600' },
+                                color: '#475569'
+                            }
+                        },
+                        scales: {
+                            x: { 
+                                title: { display: !isHorizontal, text: 'Cost per Point ($)' }, 
+                                grid: { color: isHorizontal ? 'transparent' : '#e2e8f0' },
+                                ticks: isHorizontal ? {} : { maxRotation: 45, font: { size: 13 } }
+                            },
+                            y: { 
+                                grid: { display: !isHorizontal, color: '#e2e8f0' }, 
+                                ticks: { font: { size: 13 } } 
+                            }
+                        }
+                    }
+                });
+            } else if (type === 'reasoning') {
+                const reasoningPairs = getReasoningPairs();
+                const isHorizontal = settings.orientation === 'horizontal';
+                
+                chartInstances[sectionId] = new Chart(ctx, {
+                    type: 'bar',
+                    data: {
+                        labels: reasoningPairs.map(p => p.name),
+                        datasets: [
+                            { label: 'Base Intelligence', data: reasoningPairs.map(p => p.base), backgroundColor: '#3b82f6', borderRadius: 4, barPercentage: 0.35 },
+                            { label: 'With Reasoning', data: reasoningPairs.map(p => p.reasoning), backgroundColor: '#ec4899', borderRadius: 4, barPercentage: 0.35 },
+                            { label: 'Base Cost', data: reasoningPairs.map(p => p.baseCost), backgroundColor: '#94a3b8', borderRadius: 4, barPercentage: 0.35, yAxisID: 'cost' },
+                            { label: 'Reasoning Cost', data: reasoningPairs.map(p => p.reasoningCost), backgroundColor: '#f97316', borderRadius: 4, barPercentage: 0.35, yAxisID: 'cost' }
+                        ]
+                    },
+                    options: {
+                        indexAxis: isHorizontal ? 'y' : 'x',
+                        responsive: true,
+                        maintainAspectRatio: false,
+                        plugins: {
+                            legend: { position: 'top' },
+                            datalabels: { display: false },
+                            tooltip: {
+                                callbacks: {
+                                    afterBody: (ctx) => {
+                                        const idx = ctx[0].dataIndex;
+                                        const pair = reasoningPairs[idx];
+                                        const boost = ((pair.reasoning - pair.base) / pair.base * 100).toFixed(0);
+                                        const costInc = ((pair.reasoningCost - pair.baseCost) / pair.baseCost * 100).toFixed(0);
+                                        return `\nIntelligence boost: +${boost}%\nCost increase: +${costInc}%`;
+                                    }
+                                }
+                            }
+                        },
+                        scales: isHorizontal ? {
+                            x: { grid: { color: '#e2e8f0' } },
+                            y: { grid: { display: false } },
+                            cost: { position: 'top', grid: { display: false } }
+                        } : {
+                            x: { grid: { display: false } },
+                            y: { title: { display: true, text: 'Intelligence Score' }, grid: { color: '#e2e8f0' }, position: 'left', max: 100 },
+                            cost: { title: { display: true, text: 'Cost Index' }, grid: { display: false }, position: 'right' }
+                        }
+                    }
+                });
+            } else if (type === 'pricing') {
+                const sorted = [...filteredModels].sort((a, b) => (a.input + a.output) - (b.input + b.output));
+                const isHorizontal = settings.orientation === 'horizontal';
+                
+                chartInstances[sectionId] = new Chart(ctx, {
+                    type: 'bar',
+                    data: {
+                        labels: sorted.map(m => m.name),
+                        datasets: [
+                            { label: 'Input Cost ($/M tokens)', data: sorted.map(m => m.input), backgroundColor: sorted.map(m => getVendorColor(m.vendor) + '80'), borderRadius: 4 },
+                            { label: 'Output Cost ($/M tokens)', data: sorted.map(m => m.output), backgroundColor: sorted.map(m => getVendorColor(m.vendor)), borderRadius: 4 }
+                        ]
+                    },
+                    options: {
+                        indexAxis: isHorizontal ? 'y' : 'x',
+                        responsive: true,
+                        maintainAspectRatio: false,
+                        plugins: { legend: { position: 'top' }, datalabels: { display: false } },
+                        scales: {
+                            x: { grid: { color: isHorizontal ? '#e2e8f0' : 'transparent' }, ticks: isHorizontal ? {} : { maxRotation: 45, font: { size: 13 } }, title: { display: isHorizontal, text: '$ per Million Tokens' } },
+                            y: { title: { display: !isHorizontal, text: '$ per Million Tokens' }, grid: { color: isHorizontal ? 'transparent' : '#e2e8f0' }, ticks: { font: { size: 12 } } }
+                        }
+                    }
+                });
+            } else if (type === 'quadrant') {
+                // Calculate medians for quadrant thresholds (used as defaults)
+                const scores = filteredModels.map(m => m.score).sort((a, b) => a - b);
+                const costs = filteredModels.map(m => m.cost).sort((a, b) => a - b);
+                const defaultScoreThreshold = scores[Math.floor(scores.length / 2)] || 55;
+                const defaultCostThreshold = costs[Math.floor(costs.length / 2)] || 200;
+                
+                // Use custom thresholds if set, otherwise use medians
+                const scoreThreshold = settings.quadrantScoreThreshold !== null ? settings.quadrantScoreThreshold : defaultScoreThreshold;
+                const costThreshold = settings.quadrantCostThreshold !== null ? settings.quadrantCostThreshold : defaultCostThreshold;
+                
+                const getQuadrant = (m) => {
+                    if (m.score >= scoreThreshold && m.cost <= costThreshold) return 'Best Value';
+                    if (m.score >= scoreThreshold && m.cost > costThreshold) return 'Premium';
+                    if (m.score < scoreThreshold && m.cost <= costThreshold) return 'Budget';
+                    return 'Avoid';
+                };
+                
+                const vendors = [...new Set(filteredModels.map(m => m.vendor))];
+                const dataMaxCost = Math.max(...filteredModels.map(m => m.cost));
+                const maxCost = Math.max(dataMaxCost * 1.04, costThreshold * 1.2);
+                const dataMaxScore = Math.max(...filteredModels.map(m => m.score));
+                const dataMinScore = Math.min(...filteredModels.map(m => m.score));
+                const yMax = Math.min(100, Math.max(dataMaxScore + 5, scoreThreshold + 10));
+                const yMin = Math.max(0, Math.min(dataMinScore - 5, scoreThreshold - 10));
+                
+                chartInstances[sectionId] = new Chart(ctx, {
+                    type: 'scatter',
+                    data: {
+                        datasets: vendors.map(vendor => ({
+                            label: vendor,
+                            data: filteredModels.filter(m => m.vendor === vendor).map(m => ({
+                                x: m.cost,
+                                y: m.score,
+                                name: m.reasoning && !m.name.includes('(R)') ? `${m.name} (R)` : m.name,
+                                quadrant: getQuadrant(m)
+                            })),
+                            backgroundColor: getVendorColor(vendor),
+                            pointRadius: 8,
+                            pointHoverRadius: 10
+                        }))
+                    },
+                    options: {
+                        responsive: true,
+                        maintainAspectRatio: false,
+                        plugins: {
+                            tooltip: {
+                                callbacks: {
+                                    label: (ctx) => {
+                                        const d = ctx.raw;
+                                        return `${d.name}: Score ${d.y}, Cost $${d.x} [${d.quadrant}]`;
+                                    }
+                                }
+                            },
+                            legend: { position: 'top' },
+                            datalabels: {
+                                align: 'top',
+                                anchor: 'end',
+                                offset: 4,
+                                font: (ctx) => {
+                                    const chart = ctx.chart;
+                                    const activeElements = chart.getActiveElements();
+                                    const isHovered = activeElements.some(el => 
+                                        el.datasetIndex === ctx.datasetIndex && el.index === ctx.dataIndex
+                                    );
+                                    return {
+                                        size: isHovered ? 12 : 10,
+                                        weight: isHovered ? '700' : '500'
+                                    };
+                                },
+                                color: (ctx) => {
+                                    const chart = ctx.chart;
+                                    const activeElements = chart.getActiveElements();
+                                    const isHovered = activeElements.some(el => 
+                                        el.datasetIndex === ctx.datasetIndex && el.index === ctx.dataIndex
+                                    );
+                                    return isHovered ? '#1e293b' : '#475569';
+                                },
+                                backgroundColor: (ctx) => {
+                                    const chart = ctx.chart;
+                                    const activeElements = chart.getActiveElements();
+                                    const isHovered = activeElements.some(el => 
+                                        el.datasetIndex === ctx.datasetIndex && el.index === ctx.dataIndex
+                                    );
+                                    return isHovered ? 'rgba(255,255,255,0.95)' : 'transparent';
+                                },
+                                borderColor: (ctx) => {
+                                    const chart = ctx.chart;
+                                    const activeElements = chart.getActiveElements();
+                                    const isHovered = activeElements.some(el => 
+                                        el.datasetIndex === ctx.datasetIndex && el.index === ctx.dataIndex
+                                    );
+                                    return isHovered ? '#1e293b' : 'transparent';
+                                },
+                                borderWidth: 1,
+                                borderRadius: 4,
+                                padding: { top: 2, bottom: 2, left: 4, right: 4 },
+                                formatter: (value) => value.name || '',
+                                display: true
+                            },
+                            annotation: {
+                                annotations: {
+                                    // Background boxes for quadrants (very subtle)
+                                    bestValueBox: {
+                                        type: 'box',
+                                        xMin: 0,
+                                        xMax: costThreshold,
+                                        yMin: scoreThreshold,
+                                        yMax: yMax + 5,
+                                        backgroundColor: 'rgba(16, 185, 129, 0.08)',
+                                        borderWidth: 0
+                                    },
+                                    premiumBox: {
+                                        type: 'box',
+                                        xMin: costThreshold,
+                                        xMax: maxCost,
+                                        yMin: scoreThreshold,
+                                        yMax: yMax + 5,
+                                        backgroundColor: 'rgba(139, 92, 246, 0.08)',
+                                        borderWidth: 0
+                                    },
+                                    budgetBox: {
+                                        type: 'box',
+                                        xMin: 0,
+                                        xMax: costThreshold,
+                                        yMin: yMin - 5,
+                                        yMax: scoreThreshold,
+                                        backgroundColor: 'rgba(245, 158, 11, 0.08)',
+                                        borderWidth: 0
+                                    },
+                                    avoidBox: {
+                                        type: 'box',
+                                        xMin: costThreshold,
+                                        xMax: maxCost,
+                                        yMin: yMin - 5,
+                                        yMax: scoreThreshold,
+                                        backgroundColor: 'rgba(239, 68, 68, 0.08)',
+                                        borderWidth: 0
+                                    },
+                                    // Threshold lines
+                                    verticalLine: {
+                                        type: 'line',
+                                        xMin: costThreshold,
+                                        xMax: costThreshold,
+                                        borderColor: '#64748b',
+                                        borderWidth: 2,
+                                        borderDash: [6, 6]
+                                    },
+                                    horizontalLine: {
+                                        type: 'line',
+                                        yMin: scoreThreshold,
+                                        yMax: scoreThreshold,
+                                        borderColor: '#64748b',
+                                        borderWidth: 2,
+                                        borderDash: [6, 6]
+                                    },
+                                    // Quadrant labels
+                                    bestValueLabel: {
+                                        type: 'label',
+                                        xValue: costThreshold * 0.3,
+                                        yValue: yMax - 5,
+                                        content: ['BEST VALUE'],
+                                        font: { size: 14, weight: 'bold' },
+                                        color: '#10b981'
+                                    },
+                                    premiumLabel: {
+                                        type: 'label',
+                                        xValue: costThreshold + (maxCost - costThreshold) * 0.5,
+                                        yValue: yMax - 5,
+                                        content: ['PREMIUM'],
+                                        font: { size: 14, weight: 'bold' },
+                                        color: '#8b5cf6'
+                                    },
+                                    budgetLabel: {
+                                        type: 'label',
+                                        xValue: costThreshold * 0.3,
+                                        yValue: yMin + 5,
+                                        content: ['BUDGET'],
+                                        font: { size: 14, weight: 'bold' },
+                                        color: '#f59e0b'
+                                    },
+                                    avoidLabel: {
+                                        type: 'label',
+                                        xValue: costThreshold + (maxCost - costThreshold) * 0.5,
+                                        yValue: yMin + 5,
+                                        content: ['AVOID'],
+                                        font: { size: 14, weight: 'bold' },
+                                        color: '#ef4444'
+                                    }
+                                }
+                            }
+                        },
+                        scales: {
+                            x: { title: { display: true, text: 'Total Cost Index →' }, grid: { color: '#e2e8f0' }, min: 0, max: maxCost },
+                            y: { title: { display: true, text: '← Intelligence Score' }, grid: { color: '#e2e8f0' }, min: yMin, max: yMax }
+                        },
+                        onHover: (event, elements, chart) => {
+                            chart.update('none');
+                        }
+                    }
+                });
+            } else if (type === 'bestvalue' || type === 'premium' || type === 'budget' || type === 'avoid') {
+                // Calculate medians for quadrant thresholds
+                const allScores = allModels.map(m => m.score).sort((a, b) => a - b);
+                const allCosts = allModels.map(m => m.cost).sort((a, b) => a - b);
+                const medianScore = allScores[Math.floor(allScores.length / 2)] || 55;
+                const medianCost = allCosts[Math.floor(allCosts.length / 2)] || 200;
+                
+                const getQuadrant = (m) => {
+                    if (m.score >= medianScore && m.cost <= medianCost) return 'bestvalue';
+                    if (m.score >= medianScore && m.cost > medianCost) return 'premium';
+                    if (m.score < medianScore && m.cost <= medianCost) return 'budget';
+                    return 'avoid';
+                };
+                
+                const quadrantConfig = {
+                    bestvalue: { sortBy: 'cpp', ascending: true },
+                    premium: { sortBy: 'score', ascending: false },
+                    budget: { sortBy: 'cpp', ascending: true },
+                    avoid: { sortBy: 'cpp', ascending: true }
+                };
+                
+                const config = quadrantConfig[type];
+                let quadrantModels = filteredModels.filter(m => getQuadrant(m) === type);
+                quadrantModels = quadrantModels.sort((a, b) => config.ascending ? a[config.sortBy] - b[config.sortBy] : b[config.sortBy] - a[config.sortBy]);
+                
+                const isHorizontal = settings.orientation === 'horizontal';
+                
+                chartInstances[sectionId] = new Chart(ctx, {
+                    type: 'bar',
+                    data: {
+                        labels: quadrantModels.map(m => m.name),
+                        datasets: [{
+                            label: 'Intelligence Score',
+                            data: quadrantModels.map(m => m.score),
+                            backgroundColor: quadrantModels.map(m => getVendorColor(m.vendor)),
+                            borderRadius: 4
+                        }]
+                    },
+                    options: {
+                        indexAxis: isHorizontal ? 'y' : 'x',
+                        responsive: true,
+                        maintainAspectRatio: false,
+                        plugins: {
+                            legend: { display: false },
+                            datalabels: {
+                                anchor: isHorizontal ? 'end' : 'end',
+                                align: isHorizontal ? 'right' : 'top',
+                                formatter: (value, ctx) => {
+                                    const m = quadrantModels[ctx.dataIndex];
+                                    return `${value} (CPP: $${m.cpp.toFixed(2)})`;
+                                },
+                                font: { size: 12, weight: '600' },
+                                color: '#475569'
+                            },
+                            tooltip: {
+                                callbacks: {
+                                    afterLabel: (ctx) => {
+                                        const m = quadrantModels[ctx.dataIndex];
+                                        return `Cost: ${m.cost} | CPP: $${m.cpp.toFixed(2)}\nInput: $${m.input} | Output: $${m.output}`;
+                                    }
+                                }
+                            }
+                        },
+                        scales: {
+                            x: {
+                                title: { display: !isHorizontal, text: 'Intelligence Score' },
+                                grid: { color: isHorizontal ? 'transparent' : '#e2e8f0' },
+                                ticks: isHorizontal ? {} : { maxRotation: 45, font: { size: 13 } },
+                                max: isHorizontal ? 100 : undefined
+                            },
+                            y: {
+                                title: { display: isHorizontal, text: '' },
+                                grid: { color: isHorizontal ? '#e2e8f0' : 'transparent' },
+                                ticks: { font: { size: 13 } },
+                                max: isHorizontal ? undefined : 100
+                            }
+                        }
+                    }
+                });
+            }
+        }
+
+        function toggleSelector(sectionId) {
+            document.getElementById(`selector-${sectionId}`).classList.toggle('visible');
+        }
+
+        function toggleModelItem(checkbox) {
+            checkbox.closest('.model-pill').classList.toggle('active', checkbox.checked);
+        }
+
+        function selectAll(sectionId, select) {
+            document.getElementById(`models-${sectionId}`).querySelectorAll('.model-pill').forEach(item => {
+                item.querySelector('input').checked = select;
+                item.classList.toggle('active', select);
+            });
+        }
+
+        function getSelectedModels(sectionId) {
+            const selected = new Set();
+            document.getElementById(`models-${sectionId}`).querySelectorAll('.model-pill').forEach(item => {
+                if (item.querySelector('input').checked) selected.add(parseInt(item.dataset.modelId));
+            });
+            return selected;
+        }
+
+        function applySelection(sectionId) {
+            const selected = getSelectedModels(sectionId);
+            chartSettings[sectionId].selectedModels = selected;
+            renderChart(sectionId, chartSettings[sectionId].type, selected);
+            toggleSelector(sectionId);
+            saveToStorage();
+        }
+
+        let currentExportData = null;
+        let currentExportFileName = null;
+
+        function exportChart(sectionId, format = 'png') {
+            try {
+                const chartCanvas = document.getElementById(`canvas-${sectionId}`);
+                const title = chartSettings[sectionId].customTitle;
+                
+                // Handle compare sections (no canvas)
+                if (chartSettings[sectionId].type === 'compare') {
+                    exportCompareSection(sectionId, format);
+                    return;
+                }
+                
+                // Create export canvas with extra space for title and attribution
+                const padding = 40;
+            const titleHeight = 50;
+            const attributionHeight = 70;
+            const exportCanvas = document.createElement('canvas');
+            exportCanvas.width = chartCanvas.width + (padding * 2);
+            exportCanvas.height = chartCanvas.height + titleHeight + attributionHeight + (padding * 2);
+            
+            const ctx = exportCanvas.getContext('2d');
+            
+            // White background
+            ctx.fillStyle = '#ffffff';
+            ctx.fillRect(0, 0, exportCanvas.width, exportCanvas.height);
+            
+            // Draw title
+            ctx.fillStyle = '#1e293b';
+            ctx.font = 'bold 24px Inter, system-ui, sans-serif';
+            ctx.textAlign = 'center';
+            ctx.fillText(title, exportCanvas.width / 2, padding + 30);
+            
+            // Draw chart
+            ctx.drawImage(chartCanvas, padding, titleHeight + padding);
+            
+            // Draw attribution background
+            const attrY = exportCanvas.height - attributionHeight;
+            ctx.fillStyle = '#f8fafc';
+            ctx.fillRect(0, attrY, exportCanvas.width, attributionHeight);
+            
+            // Draw separator line
+            ctx.strokeStyle = '#e2e8f0';
+            ctx.lineWidth = 1;
+            ctx.beginPath();
+            ctx.moveTo(0, attrY);
+            ctx.lineTo(exportCanvas.width, attrY);
+            ctx.stroke();
+            
+            // LinkedIn icon (simplified)
+            const iconX = exportCanvas.width / 2 - 180;
+            const iconY = attrY + 25;
+            ctx.fillStyle = '#0077b5';
+            ctx.beginPath();
+            ctx.moveTo(iconX + 3, iconY);
+            ctx.lineTo(iconX + 17, iconY);
+            ctx.quadraticCurveTo(iconX + 20, iconY, iconX + 20, iconY + 3);
+            ctx.lineTo(iconX + 20, iconY + 17);
+            ctx.quadraticCurveTo(iconX + 20, iconY + 20, iconX + 17, iconY + 20);
+            ctx.lineTo(iconX + 3, iconY + 20);
+            ctx.quadraticCurveTo(iconX, iconY + 20, iconX, iconY + 17);
+            ctx.lineTo(iconX, iconY + 3);
+            ctx.quadraticCurveTo(iconX, iconY, iconX + 3, iconY);
+            ctx.fill();
+            ctx.fillStyle = '#ffffff';
+            ctx.font = 'bold 14px Inter, system-ui, sans-serif';
+            ctx.textAlign = 'center';
+            ctx.fillText('in', iconX + 10, iconY + 15);
+            
+            // Author attribution (emphasized)
+            ctx.fillStyle = '#0077b5';
+            ctx.font = 'bold 16px Inter, system-ui, sans-serif';
+            ctx.textAlign = 'left';
+            ctx.fillText('Krzysztof Karaszewski', iconX + 28, iconY + 15);
+            
+            // LinkedIn URL
+            ctx.fillStyle = '#64748b';
+            ctx.font = '12px Inter, system-ui, sans-serif';
+            ctx.fillText('linkedin.com/in/k-karaszewski', iconX + 28, iconY + 32);
+            
+            // Data source
+            ctx.fillStyle = '#94a3b8';
+            ctx.font = '12px Inter, system-ui, sans-serif';
+            ctx.textAlign = 'right';
+            ctx.fillText('Data: artificialanalysis.ai', exportCanvas.width - padding, attrY + 28);
+            
+            // Date
+            const date = new Date().toLocaleDateString('en-US', { month: 'short', year: 'numeric' });
+            ctx.fillText(date, exportCanvas.width - padding, attrY + 46);
+            
+            // Generate image data
+            const fileName = title.replace(/[^a-z0-9]/gi, '_').toLowerCase();
+            let imageData;
+            
+            if (format === 'jpeg' || format === 'jpg') {
+                currentExportFileName = `${fileName}_${Date.now()}.jpg`;
+                imageData = exportCanvas.toDataURL('image/jpeg', 0.95);
+            } else {
+                currentExportFileName = `${fileName}_${Date.now()}.png`;
+                imageData = exportCanvas.toDataURL('image/png', 1.0);
+            }
+            
+            currentExportData = imageData;
+            
+            // Show modal with the image
+            document.getElementById('exportImage').src = imageData;
+            document.getElementById('exportModal').classList.add('visible');
+            } catch (error) {
+                console.error('Export error:', error);
+                alert('Error exporting chart: ' + error.message);
+            }
+        }
+        
+        function closeExportModal() {
+            document.getElementById('exportModal').classList.remove('visible');
+        }
+        
+        function exportCompareSection(sectionId, format = 'png') {
+            try {
+            const settings = chartSettings[sectionId];
+            const title = settings.customTitle;
+            
+            // Convert to numbers for comparison
+            const modelAId = parseInt(settings.compareModelA);
+            const modelBId = parseInt(settings.compareModelB);
+            
+            const modelA = allModels.find(m => parseInt(m.id) === modelAId);
+            const modelB = allModels.find(m => parseInt(m.id) === modelBId);
+            
+            if (!modelA || !modelB) {
+                alert('Please select two models to compare before exporting');
+                return;
+            }
+            
+            const metrics = settings.compareMetrics || ['score', 'cost', 'cpp', 'input', 'output'];
+            const metricsConfig = {
+                score: { label: 'Intelligence Score', format: v => v, higherBetter: true },
+                cost: { label: 'Cost Index', format: v => `$${v}`, higherBetter: false },
+                cpp: { label: 'Cost per Point', format: v => `$${v.toFixed(2)}`, higherBetter: false },
+                input: { label: 'Input ($/M tokens)', format: v => `$${v.toFixed(2)}`, higherBetter: false },
+                output: { label: 'Output ($/M tokens)', format: v => `$${v.toFixed(2)}`, higherBetter: false }
+            };
+            
+            // Canvas dimensions
+            const padding = 40;
+            const titleHeight = 60;
+            const headerHeight = 45;
+            const rowHeight = 40;
+            const attributionHeight = 70;
+            const colWidths = [200, 140, 140, 220];
+            const tableWidth = colWidths.reduce((a, b) => a + b, 0);
+            const canvasWidth = tableWidth + (padding * 2);
+            const tableHeight = headerHeight + (metrics.length * rowHeight);
+            const canvasHeight = titleHeight + tableHeight + attributionHeight + (padding * 2) + 20;
+            
+            const exportCanvas = document.createElement('canvas');
+            exportCanvas.width = canvasWidth;
+            exportCanvas.height = canvasHeight;
+            const ctx = exportCanvas.getContext('2d');
+            
+            // White background
+            ctx.fillStyle = '#ffffff';
+            ctx.fillRect(0, 0, canvasWidth, canvasHeight);
+            
+            // Draw title
+            ctx.fillStyle = '#1e293b';
+            ctx.font = 'bold 22px Inter, system-ui, sans-serif';
+            ctx.textAlign = 'center';
+            ctx.fillText(title, canvasWidth / 2, padding + 25);
+            
+            // Draw subtitle with model names
+            ctx.fillStyle = '#0891b2';
+            ctx.font = 'bold 16px Inter, system-ui, sans-serif';
+            ctx.fillText(`${modelA.name}  vs  ${modelB.name}`, canvasWidth / 2, padding + 50);
+            
+            // Table starting position
+            const tableX = padding;
+            const tableY = titleHeight + padding;
+            
+            // Draw table header background
+            ctx.fillStyle = '#f8fafc';
+            ctx.fillRect(tableX, tableY, tableWidth, headerHeight);
+            
+            // Draw header border
+            ctx.strokeStyle = '#e2e8f0';
+            ctx.lineWidth = 2;
+            ctx.beginPath();
+            ctx.moveTo(tableX, tableY + headerHeight);
+            ctx.lineTo(tableX + tableWidth, tableY + headerHeight);
+            ctx.stroke();
+            
+            // Draw header text
+            ctx.fillStyle = '#64748b';
+            ctx.font = '600 13px Inter, system-ui, sans-serif';
+            ctx.textAlign = 'left';
+            ctx.fillText('Metric', tableX + 15, tableY + 28);
+            ctx.textAlign = 'center';
+            ctx.fillStyle = '#0891b2';
+            ctx.font = 'bold 13px Inter, system-ui, sans-serif';
+            ctx.fillText(modelA.name, tableX + colWidths[0] + colWidths[1]/2, tableY + 28);
+            ctx.fillText(modelB.name, tableX + colWidths[0] + colWidths[1] + colWidths[2]/2, tableY + 28);
+            ctx.fillStyle = '#64748b';
+            ctx.font = '600 13px Inter, system-ui, sans-serif';
+            ctx.fillText('Difference', tableX + colWidths[0] + colWidths[1] + colWidths[2] + colWidths[3]/2, tableY + 28);
+            
+            // Draw rows
+            metrics.forEach((key, i) => {
+                const m = metricsConfig[key];
+                const valueA = modelA[key];
+                const valueB = modelB[key];
+                const diff = valueA - valueB;
+                const pctDiff = valueB !== 0 ? ((valueA - valueB) / valueB * 100) : 0;
+                const rowY = tableY + headerHeight + (i * rowHeight);
+                
+                // Row background (alternating)
+                if (i % 2 === 1) {
+                    ctx.fillStyle = '#fafafa';
+                    ctx.fillRect(tableX, rowY, tableWidth, rowHeight);
+                }
+                
+                // Determine winner
+                let aWins = false, bWins = false;
+                if (diff !== 0) {
+                    if (m.higherBetter) {
+                        aWins = diff > 0;
+                        bWins = diff < 0;
+                    } else {
+                        aWins = diff < 0;
+                        bWins = diff > 0;
+                    }
+                }
+                
+                // Winner highlight
+                if (aWins) {
+                    ctx.fillStyle = '#ecfdf5';
+                    ctx.fillRect(tableX + colWidths[0], rowY, colWidths[1], rowHeight);
+                }
+                if (bWins) {
+                    ctx.fillStyle = '#ecfdf5';
+                    ctx.fillRect(tableX + colWidths[0] + colWidths[1], rowY, colWidths[2], rowHeight);
+                }
+                
+                // Row border
+                ctx.strokeStyle = '#e2e8f0';
+                ctx.lineWidth = 1;
+                ctx.beginPath();
+                ctx.moveTo(tableX, rowY + rowHeight);
+                ctx.lineTo(tableX + tableWidth, rowY + rowHeight);
+                ctx.stroke();
+                
+                // Metric label
+                ctx.fillStyle = '#475569';
+                ctx.font = '500 13px Inter, system-ui, sans-serif';
+                ctx.textAlign = 'left';
+                ctx.fillText(m.label, tableX + 15, rowY + 25);
+                
+                // Value A
+                ctx.fillStyle = aWins ? '#059669' : '#1e293b';
+                ctx.font = aWins ? 'bold 13px Inter, system-ui, sans-serif' : '13px Inter, system-ui, sans-serif';
+                ctx.textAlign = 'center';
+                ctx.fillText(m.format(valueA), tableX + colWidths[0] + colWidths[1]/2, rowY + 25);
+                
+                // Value B
+                ctx.fillStyle = bWins ? '#059669' : '#1e293b';
+                ctx.font = bWins ? 'bold 13px Inter, system-ui, sans-serif' : '13px Inter, system-ui, sans-serif';
+                ctx.fillText(m.format(valueB), tableX + colWidths[0] + colWidths[1] + colWidths[2]/2, rowY + 25);
+                
+                // Difference
+                let diffText = 'Same';
+                let diffColor = '#64748b';
+                if (diff !== 0) {
+                    const absDiff = Math.abs(diff);
+                    const absPct = Math.abs(pctDiff);
+                    if (m.higherBetter) {
+                        diffText = diff > 0 ? `▲ +${absDiff} pts` : `▼ -${absDiff} pts`;
+                        diffColor = diff > 0 ? '#10b981' : '#ef4444';
+                    } else {
+                        diffText = diff < 0 ? `▼ ${m.format(absDiff)} cheaper (${absPct.toFixed(1)}%)` : `▲ ${m.format(absDiff)} more (+${absPct.toFixed(1)}%)`;
+                        diffColor = diff < 0 ? '#10b981' : '#ef4444';
+                    }
+                }
+                ctx.fillStyle = diffColor;
+                ctx.font = '600 12px Inter, system-ui, sans-serif';
+                ctx.fillText(diffText, tableX + colWidths[0] + colWidths[1] + colWidths[2] + colWidths[3]/2, rowY + 25);
+            });
+            
+            // Draw attribution background
+            const attrY = canvasHeight - attributionHeight;
+            ctx.fillStyle = '#f8fafc';
+            ctx.fillRect(0, attrY, canvasWidth, attributionHeight);
+            
+            // Draw separator line
+            ctx.strokeStyle = '#e2e8f0';
+            ctx.lineWidth = 1;
+            ctx.beginPath();
+            ctx.moveTo(0, attrY);
+            ctx.lineTo(canvasWidth, attrY);
+            ctx.stroke();
+            
+            // LinkedIn icon
+            const iconX = canvasWidth / 2 - 180;
+            const iconY = attrY + 25;
+            ctx.fillStyle = '#0077b5';
+            ctx.beginPath();
+            ctx.moveTo(iconX + 3, iconY);
+            ctx.lineTo(iconX + 17, iconY);
+            ctx.quadraticCurveTo(iconX + 20, iconY, iconX + 20, iconY + 3);
+            ctx.lineTo(iconX + 20, iconY + 17);
+            ctx.quadraticCurveTo(iconX + 20, iconY + 20, iconX + 17, iconY + 20);
+            ctx.lineTo(iconX + 3, iconY + 20);
+            ctx.quadraticCurveTo(iconX, iconY + 20, iconX, iconY + 17);
+            ctx.lineTo(iconX, iconY + 3);
+            ctx.quadraticCurveTo(iconX, iconY, iconX + 3, iconY);
+            ctx.fill();
+            ctx.fillStyle = '#ffffff';
+            ctx.font = 'bold 14px Inter, system-ui, sans-serif';
+            ctx.textAlign = 'center';
+            ctx.fillText('in', iconX + 10, iconY + 15);
+            
+            // Author attribution
+            ctx.fillStyle = '#0077b5';
+            ctx.font = 'bold 16px Inter, system-ui, sans-serif';
+            ctx.textAlign = 'left';
+            ctx.fillText('Krzysztof Karaszewski', iconX + 28, iconY + 15);
+            
+            // LinkedIn URL
+            ctx.fillStyle = '#64748b';
+            ctx.font = '12px Inter, system-ui, sans-serif';
+            ctx.fillText('linkedin.com/in/k-karaszewski', iconX + 28, iconY + 32);
+            
+            // Data source
+            ctx.fillStyle = '#94a3b8';
+            ctx.font = '12px Inter, system-ui, sans-serif';
+            ctx.textAlign = 'right';
+            ctx.fillText('Data: artificialanalysis.ai', canvasWidth - padding, attrY + 28);
+            
+            // Date
+            const date = new Date().toLocaleDateString('en-US', { month: 'short', year: 'numeric' });
+            ctx.fillText(date, canvasWidth - padding, attrY + 46);
+            
+            // Generate image data
+            const fileName = title.replace(/[^a-z0-9]/gi, '_').toLowerCase();
+            let imageData;
+            
+            if (format === 'jpeg' || format === 'jpg') {
+                currentExportFileName = `${fileName}_${Date.now()}.jpg`;
+                imageData = exportCanvas.toDataURL('image/jpeg', 0.95);
+            } else {
+                currentExportFileName = `${fileName}_${Date.now()}.png`;
+                imageData = exportCanvas.toDataURL('image/png', 1.0);
+            }
+            
+            currentExportData = imageData;
+            
+            // Show modal with the image
+            document.getElementById('exportImage').src = imageData;
+            document.getElementById('exportModal').classList.add('visible');
+            } catch (error) {
+                console.error('Compare export error:', error);
+                alert('Error exporting comparison: ' + error.message);
+            }
+        }
+        
+        function tryDirectDownload() {
+            if (currentExportData && currentExportFileName) {
+                const link = document.createElement('a');
+                link.download = currentExportFileName;
+                link.href = currentExportData;
+                document.body.appendChild(link);
+                link.click();
+                document.body.removeChild(link);
+            }
+        }
+        
+        function showExportMenu(sectionId, btn) {
+            // Remove any existing menu
+            const existing = document.getElementById('exportMenu');
+            if (existing) existing.remove();
+            
+            const menu = document.createElement('div');
+            menu.id = 'exportMenu';
+            menu.style.cssText = 'position: absolute; background: white; border: 1px solid #e2e8f0; border-radius: 8px; box-shadow: 0 4px 12px rgba(0,0,0,0.15); padding: 0.5rem 0; z-index: 1000;';
+            menu.innerHTML = `
+                <button style="display: block; width: 100%; padding: 0.5rem 1rem; border: none; background: none; text-align: left; cursor: pointer; font-size: 0.875rem;" onmouseover="this.style.background='#f1f5f9'" onmouseout="this.style.background='none'" onclick="exportChart('${sectionId}', 'png'); this.parentElement.remove();">
+                    Export as PNG
+                </button>
+                <button style="display: block; width: 100%; padding: 0.5rem 1rem; border: none; background: none; text-align: left; cursor: pointer; font-size: 0.875rem;" onmouseover="this.style.background='#f1f5f9'" onmouseout="this.style.background='none'" onclick="exportChart('${sectionId}', 'jpeg'); this.parentElement.remove();">
+                    Export as JPEG
+                </button>
+            `;
+            
+            const rect = btn.getBoundingClientRect();
+            menu.style.top = (rect.bottom + 5) + 'px';
+            menu.style.left = rect.left + 'px';
+            
+            document.body.appendChild(menu);
+            
+            // Close menu when clicking outside
+            setTimeout(() => {
+                document.addEventListener('click', function closeMenu(e) {
+                    if (!menu.contains(e.target) && e.target !== btn) {
+                        menu.remove();
+                        document.removeEventListener('click', closeMenu);
+                    }
+                });
+            }, 10);
+        }
+
+        function cloneChart(originalSectionId) {
+            const typeKey = chartSettings[originalSectionId].typeKey;
+            const selectedModels = getSelectedModels(originalSectionId);
+            const originalSettings = chartSettings[originalSectionId];
+
+            const { section, sectionId } = createChartSection(typeKey, true, {
+                orientation: originalSettings.orientation,
+                selectedModels: Array.from(selectedModels),
+                customTitle: originalSettings.customTitle + ' (Copy)',
+                quadrantScoreThreshold: originalSettings.quadrantScoreThreshold,
+                quadrantCostThreshold: originalSettings.quadrantCostThreshold
+            });
+            
+            document.getElementById(originalSectionId).after(section);
+            activeCharts.splice(activeCharts.indexOf(originalSectionId) + 1, 0, sectionId);
+            
+            renderChart(sectionId, chartSettings[sectionId].type, chartSettings[sectionId].selectedModels);
+            saveToStorage();
+            updateEmptyState();
+        }
+
+        function removeChart(sectionId) {
+            if (chartInstances[sectionId]) {
+                chartInstances[sectionId].destroy();
+                delete chartInstances[sectionId];
+            }
+            delete chartSettings[sectionId];
+            activeCharts = activeCharts.filter(id => id !== sectionId);
+            document.getElementById(sectionId).remove();
+            saveToStorage();
+            updateEmptyState();
+        }
+
+        function moveChartUp(sectionId) {
+            const index = activeCharts.indexOf(sectionId);
+            if (index <= 0) return; // Already at top
+            
+            // Swap in activeCharts array
+            [activeCharts[index - 1], activeCharts[index]] = [activeCharts[index], activeCharts[index - 1]];
+            
+            // Move DOM element
+            const container = document.getElementById('chartsContainer');
+            const chartElement = document.getElementById(sectionId);
+            const previousElement = chartElement.previousElementSibling;
+            if (previousElement) {
+                container.insertBefore(chartElement, previousElement);
+            }
+            
+            saveToStorage();
+        }
+
+        function moveChartDown(sectionId) {
+            const index = activeCharts.indexOf(sectionId);
+            if (index >= activeCharts.length - 1) return; // Already at bottom
+            
+            // Swap in activeCharts array
+            [activeCharts[index], activeCharts[index + 1]] = [activeCharts[index + 1], activeCharts[index]];
+            
+            // Move DOM element
+            const container = document.getElementById('chartsContainer');
+            const chartElement = document.getElementById(sectionId);
+            const nextElement = chartElement.nextElementSibling;
+            if (nextElement) {
+                container.insertBefore(nextElement, chartElement);
+            }
+            
+            saveToStorage();
+        }
+
+        function clearAllCharts() {
+            [...activeCharts].forEach(id => {
+                if (chartInstances[id]) chartInstances[id].destroy();
+                delete chartInstances[id];
+                delete chartSettings[id];
+                document.getElementById(id)?.remove();
+            });
+            activeCharts = [];
+            saveToStorage();
+            updateEmptyState();
+        }
+
+        function updateEmptyState() {
+            document.getElementById('emptyState').style.display = activeCharts.length === 0 ? 'block' : 'none';
+        }
+
+        // Data Editor
+        function openDataEditor() {
+            document.getElementById('dataEditorModal').classList.add('visible');
+            renderModelsTable();
+            // Populate vendor suggestions
+            const vendors = [...new Set(allModels.map(m => m.vendor))];
+            document.getElementById('vendorList').innerHTML = vendors.map(v => `<option value="${v}">`).join('');
+        }
+
+        function closeDataEditor() {
+            document.getElementById('dataEditorModal').classList.remove('visible');
+        }
+
+        function renderModelsTable() {
+            const tbody = document.getElementById('modelsTableBody');
+            tbody.innerHTML = [...allModels].sort((a, b) => a.name.localeCompare(b.name)).map(m => `
+                <tr>
+                    <td><div class="vendor-dot" style="background: ${getVendorColor(m.vendor)}; display: inline-block; margin-right: 8px;"></div>${m.name}</td>
+                    <td>${m.vendor}</td>
+                    <td>${m.reasoning ? '✓' : ''}</td>
+                    <td>${m.score}</td>
+                    <td>${m.cost}</td>
+                    <td>$${m.cpp.toFixed(2)}</td>
+                    <td>$${m.input}</td>
+                    <td>$${m.output}</td>
+                    <td class="actions">
+                        <button type="button" class="btn-icon delete" onclick="deleteModel(${m.id})" title="Delete">
+                            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                <polyline points="3,6 5,6 21,6"/>
+                                <path d="M19,6v14a2,2,0,0,1-2,2H7a2,2,0,0,1-2-2V6m3,0V4a2,2,0,0,1,2-2h4a2,2,0,0,1,2,2v2"/>
+                            </svg>
+                        </button>
+                    </td>
+                </tr>
+            `).join('');
+        }
+
+        function addModel() {
+            try {
+                // Get values
+                const name = document.getElementById('modelName').value.trim();
+                const vendor = document.getElementById('modelVendor').value.trim();
+                const score = parseFloat(document.getElementById('modelScore').value);
+                const cost = parseFloat(document.getElementById('modelCost').value);
+                const input = parseFloat(document.getElementById('modelInput').value);
+                const output = parseFloat(document.getElementById('modelOutput').value);
+                
+                // Validate required fields
+                if (!name || !vendor || isNaN(score) || isNaN(cost) || isNaN(input) || isNaN(output)) {
+                    alert('Please fill in all required fields (Name, Vendor, Score, Cost, Input, Output)');
+                    return;
+                }
+                
+                const cppInput = document.getElementById('modelCpp').value;
+                const cpp = cppInput ? parseFloat(cppInput) : (cost / score);
+
+                const newModel = {
+                    id: Math.max(...allModels.map(m => m.id), 0) + 1,
+                    name: name,
+                    vendor: vendor,
+                    reasoning: document.getElementById('modelReasoning').checked,
+                    score: score,
+                    cost: cost,
+                    cpp: parseFloat(cpp.toFixed(2)),
+                    input: input,
+                    output: output
+                };
+
+                allModels.push(newModel);
+                
+                // Add new model to all existing chart selections
+                activeCharts.forEach(sectionId => {
+                    if (chartSettings[sectionId] && chartSettings[sectionId].selectedModels) {
+                        chartSettings[sectionId].selectedModels.add(newModel.id);
+                    }
+                });
+                
+                saveToStorage();
+                renderModelsTable();
+                refreshAllCharts();
+                
+                // Clear the form fields
+                document.getElementById('modelName').value = '';
+                document.getElementById('modelVendor').value = '';
+                document.getElementById('modelScore').value = '';
+                document.getElementById('modelCost').value = '';
+                document.getElementById('modelCpp').value = '';
+                document.getElementById('modelInput').value = '';
+                document.getElementById('modelOutput').value = '';
+                document.getElementById('modelReasoning').checked = false;
+                
+                console.log('Model added successfully:', newModel);
+            } catch (error) {
+                console.error('Error adding model:', error);
+                alert('Error adding model: ' + error.message);
+            }
+        }
+
+        function deleteModel(id) {
+            try {
+                console.log('Deleting model with id:', id);
+                
+                const initialLength = allModels.length;
+                allModels = allModels.filter(m => m.id !== id);
+                console.log('Models before:', initialLength, 'Models after:', allModels.length);
+                
+                // Also remove from chart selections
+                activeCharts.forEach(sectionId => {
+                    if (chartSettings[sectionId] && chartSettings[sectionId].selectedModels) {
+                        chartSettings[sectionId].selectedModels.delete(id);
+                    }
+                });
+                
+                saveToStorage();
+                renderModelsTable();
+                refreshAllCharts();
+                console.log('Model deleted successfully');
+            } catch (error) {
+                console.error('Error deleting model:', error);
+            }
+        }
+
+        function refreshAllCharts() {
+            activeCharts.forEach(sectionId => {
+                // Update model selector
+                const container = document.getElementById(`models-${sectionId}`);
+                if (container) {
+                    const currentSelected = chartSettings[sectionId].selectedModels;
+                    container.innerHTML = [...allModels].sort((a, b) => a.name.localeCompare(b.name)).map(m => `
+                        <label class="model-pill ${currentSelected.has(m.id) ? 'active' : ''}" data-model-id="${m.id}">
+                            <input type="checkbox" ${currentSelected.has(m.id) ? 'checked' : ''} onchange="toggleModelItem(this)">
+                            <div class="vendor-dot" style="background: ${getVendorColor(m.vendor)}"></div>
+                            <span>${m.name}</span>
+                        </label>
+                    `).join('');
+                }
+                renderChart(sectionId, chartSettings[sectionId].type, chartSettings[sectionId].selectedModels);
+            });
+        }
+
+        // Add Chart Modal
+        function openAddChart() {
+            document.getElementById('addChartModal').classList.add('visible');
+        }
+
+        function closeAddChart() {
+            document.getElementById('addChartModal').classList.remove('visible');
+        }
+
+        function addNewChart() {
+            const typeKey = document.getElementById('newChartType').value;
+            
+            if (typeKey === 'compare') {
+                const { section, sectionId } = createCompareSection();
+                document.getElementById('chartsContainer').appendChild(section);
+                activeCharts.push(sectionId);
+            } else {
+                const { section, sectionId } = createChartSection(typeKey);
+                document.getElementById('chartsContainer').appendChild(section);
+                activeCharts.push(sectionId);
+                renderChart(sectionId, chartSettings[sectionId].type, chartSettings[sectionId].selectedModels);
+            }
+            
+            closeAddChart();
+            saveToStorage();
+            updateEmptyState();
+        }
+
+        function clearLocalStorage() {
+            localStorage.removeItem('aiModelAnalysis_models');
+            localStorage.removeItem('aiModelAnalysis_charts');
+            location.reload();
+        }
+
+        function resetToDefaults() {
+            localStorage.removeItem('aiModelAnalysis_models');
+            localStorage.removeItem('aiModelAnalysis_charts');
+            location.reload();
+        }
+
+        function saveConfiguration() {
+            const config = {
+                version: '1.0',
+                exportDate: new Date().toISOString(),
+                models: allModels,
+                charts: activeCharts.map(id => ({
+                    id,
+                    settings: {
+                        ...chartSettings[id],
+                        selectedModels: chartSettings[id].selectedModels ? Array.from(chartSettings[id].selectedModels) : undefined
+                    }
+                }))
+            };
+            
+            const jsonString = JSON.stringify(config, null, 2);
+            const blob = new Blob([jsonString], { type: 'application/json' });
+            const url = URL.createObjectURL(blob);
+            
+            // Try direct download first
+            const link = document.createElement('a');
+            link.download = `ai_model_dashboard_${Date.now()}.json`;
+            link.href = url;
+            document.body.appendChild(link);
+            link.click();
+            document.body.removeChild(link);
+            URL.revokeObjectURL(url);
+            
+            // Also show in modal as fallback for Claude iframe
+            showSaveModal(jsonString);
+        }
+        
+        function showSaveModal(jsonString) {
+            const modal = document.createElement('div');
+            modal.className = 'modal-overlay visible';
+            modal.id = 'saveModal';
+            modal.innerHTML = `
+                <div class="modal" style="max-width: 600px;">
+                    <div class="modal-header">
+                        <h2>Configuration Saved</h2>
+                        <button class="btn btn-ghost" onclick="document.getElementById('saveModal').remove()">✕</button>
+                    </div>
+                    <p style="margin-bottom: 1rem; color: #64748b; font-size: 0.875rem;">
+                        If the download didn't start, copy the JSON below and save it to a .json file:
+                    </p>
+                    <textarea id="saveConfigText" style="width: 100%; height: 200px; font-family: monospace; font-size: 0.75rem; padding: 0.5rem; border: 1px solid #e2e8f0; border-radius: 8px; resize: vertical;"></textarea>
+                    <div class="modal-footer" style="margin-top: 1rem;">
+                        <button class="btn btn-ghost" onclick="document.getElementById('saveModal').remove()">Close</button>
+                        <button class="btn btn-primary" onclick="copyConfigToClipboard()">Copy to Clipboard</button>
+                    </div>
+                </div>
+            `;
+            document.body.appendChild(modal);
+            document.getElementById('saveConfigText').value = jsonString;
+        }
+        
+        function copyConfigToClipboard() {
+            const textarea = document.getElementById('saveConfigText');
+            const text = textarea.value;
+            
+            if (navigator.clipboard && navigator.clipboard.writeText) {
+                navigator.clipboard.writeText(text).then(() => {
+                    showCopySuccess();
+                }).catch(() => {
+                    fallbackCopy(textarea);
+                });
+            } else {
+                fallbackCopy(textarea);
+            }
+        }
+        
+        function fallbackCopy(textarea) {
+            textarea.select();
+            document.execCommand('copy');
+            showCopySuccess();
+        }
+        
+        function showCopySuccess() {
+            const btn = document.querySelector('#saveModal .btn-primary');
+            if (btn) {
+                const originalText = btn.textContent;
+                btn.textContent = 'Copied!';
+                btn.style.background = '#10b981';
+                setTimeout(() => {
+                    btn.textContent = originalText;
+                    btn.style.background = '';
+                }, 2000);
+            }
+        }
+        
+        function loadConfiguration(event) {
+            const file = event.target.files[0];
+            if (!file) return;
+            
+            const reader = new FileReader();
+            reader.onload = (e) => {
+                try {
+                    const config = JSON.parse(e.target.result);
+                    
+                    // Validate config
+                    if (!config.models || !config.charts) {
+                        throw new Error('Invalid configuration file');
+                    }
+                    
+                    // Clear existing charts
+                    [...activeCharts].forEach(id => {
+                        if (chartInstances[id]) chartInstances[id].destroy();
+                        delete chartInstances[id];
+                        delete chartSettings[id];
+                        document.getElementById(id)?.remove();
+                    });
+                    activeCharts = [];
+                    chartCounter = 0;
+                    
+                    // Load models
+                    allModels = config.models;
+                    
+                    // Load charts
+                    const container = document.getElementById('chartsContainer');
+                    config.charts.forEach(saved => {
+                        const settings = saved.settings;
+                        
+                        if (settings.type === 'compare') {
+                            const { section, sectionId } = createCompareSection({
+                                customTitle: settings.customTitle,
+                                compareModelA: settings.compareModelA,
+                                compareModelB: settings.compareModelB,
+                                compareMetrics: settings.compareMetrics
+                            });
+                            container.appendChild(section);
+                            activeCharts.push(sectionId);
+                        } else {
+                            const savedSelectedModels = settings.selectedModels && Array.isArray(settings.selectedModels) && settings.selectedModels.length > 0
+                                ? settings.selectedModels
+                                : allModels.map(m => m.id);
+                            
+                            const { section, sectionId } = createChartSection(settings.typeKey, false, {
+                                orientation: settings.orientation,
+                                selectedModels: savedSelectedModels,
+                                customTitle: settings.customTitle,
+                                quadrantScoreThreshold: settings.quadrantScoreThreshold,
+                                quadrantCostThreshold: settings.quadrantCostThreshold
+                            });
+                            container.appendChild(section);
+                            activeCharts.push(sectionId);
+                            renderChart(sectionId, settings.type, chartSettings[sectionId].selectedModels);
+                        }
+                    });
+                    
+                    // Save to localStorage
+                    saveToStorage();
+                    updateEmptyState();
+                    
+                    // Reset file input
+                    event.target.value = '';
+                    
+                    console.log('Configuration loaded successfully');
+                } catch (error) {
+                    console.error('Error loading configuration:', error);
+                    alert('Error loading configuration: ' + error.message);
+                    event.target.value = '';
+                }
+            };
+            reader.readAsText(file);
+        }
+        
+        function showLoadModal() {
+            const modal = document.createElement('div');
+            modal.className = 'modal-overlay visible';
+            modal.id = 'loadModal';
+            modal.innerHTML = `
+                <div class="modal" style="max-width: 600px;">
+                    <div class="modal-header">
+                        <h2>Load Configuration</h2>
+                        <button class="btn btn-ghost" onclick="document.getElementById('loadModal').remove()">✕</button>
+                    </div>
+                    <p style="margin-bottom: 1rem; color: #64748b; font-size: 0.875rem;">
+                        Paste your saved JSON configuration below:
+                    </p>
+                    <textarea id="loadConfigText" placeholder="Paste JSON here..." style="width: 100%; height: 200px; font-family: monospace; font-size: 0.75rem; padding: 0.5rem; border: 1px solid #e2e8f0; border-radius: 8px; resize: vertical;"></textarea>
+                    <div class="modal-footer" style="margin-top: 1rem;">
+                        <button class="btn btn-ghost" onclick="document.getElementById('loadModal').remove()">Cancel</button>
+                        <button class="btn btn-primary" onclick="loadFromPastedJson()">Load Configuration</button>
+                    </div>
+                </div>
+            `;
+            document.body.appendChild(modal);
+        }
+        
+        function loadFromPastedJson() {
+            const textarea = document.getElementById('loadConfigText');
+            const jsonString = textarea.value.trim();
+            
+            if (!jsonString) {
+                alert('Please paste a JSON configuration');
+                return;
+            }
+            
+            try {
+                const config = JSON.parse(jsonString);
+                
+                // Validate config
+                if (!config.models || !config.charts) {
+                    throw new Error('Invalid configuration file');
+                }
+                
+                // Clear existing charts
+                [...activeCharts].forEach(id => {
+                    if (chartInstances[id]) chartInstances[id].destroy();
+                    delete chartInstances[id];
+                    delete chartSettings[id];
+                    document.getElementById(id)?.remove();
+                });
+                activeCharts = [];
+                chartCounter = 0;
+                
+                // Load models
+                allModels = config.models;
+                
+                // Load charts
+                const container = document.getElementById('chartsContainer');
+                config.charts.forEach(saved => {
+                    const settings = saved.settings;
+                    
+                    if (settings.type === 'compare') {
+                        const { section, sectionId } = createCompareSection({
+                            customTitle: settings.customTitle,
+                            compareModelA: settings.compareModelA,
+                            compareModelB: settings.compareModelB,
+                            compareMetrics: settings.compareMetrics
+                        });
+                        container.appendChild(section);
+                        activeCharts.push(sectionId);
+                    } else {
+                        const savedSelectedModels = settings.selectedModels && Array.isArray(settings.selectedModels) && settings.selectedModels.length > 0
+                            ? settings.selectedModels
+                            : allModels.map(m => m.id);
+                        
+                        const { section, sectionId } = createChartSection(settings.typeKey, false, {
+                            orientation: settings.orientation,
+                            selectedModels: savedSelectedModels,
+                            customTitle: settings.customTitle,
+                            quadrantScoreThreshold: settings.quadrantScoreThreshold,
+                            quadrantCostThreshold: settings.quadrantCostThreshold
+                        });
+                        container.appendChild(section);
+                        activeCharts.push(sectionId);
+                        renderChart(sectionId, settings.type, chartSettings[sectionId].selectedModels);
+                    }
+                });
+                
+                // Save to localStorage
+                saveToStorage();
+                updateEmptyState();
+                
+                // Close modal
+                document.getElementById('loadModal').remove();
+                
+                console.log('Configuration loaded successfully from pasted JSON');
+            } catch (error) {
+                console.error('Error loading configuration:', error);
+                alert('Error loading configuration: ' + error.message);
+            }
+        }
+
+        // Initialize
+        function init() {
+            const savedCharts = loadFromStorage();
+            const container = document.getElementById('chartsContainer');
+            
+            if (savedCharts && savedCharts.length > 0) {
+                savedCharts.forEach(saved => {
+                    const settings = saved.settings;
+                    
+                    if (settings.type === 'compare') {
+                        const { section, sectionId } = createCompareSection({
+                            customTitle: settings.customTitle,
+                            compareModelA: settings.compareModelA,
+                            compareModelB: settings.compareModelB,
+                            compareMetrics: settings.compareMetrics
+                        });
+                        container.appendChild(section);
+                        activeCharts.push(sectionId);
+                    } else {
+                        // Handle old localStorage format where selectedModels might be empty or invalid
+                        const savedSelectedModels = settings.selectedModels && Array.isArray(settings.selectedModels) && settings.selectedModels.length > 0
+                            ? settings.selectedModels
+                            : allModels.map(m => m.id); // Default to all models
+                        
+                        const { section, sectionId } = createChartSection(settings.typeKey, false, {
+                            orientation: settings.orientation,
+                            selectedModels: savedSelectedModels,
+                            customTitle: settings.customTitle,
+                            quadrantScoreThreshold: settings.quadrantScoreThreshold,
+                            quadrantCostThreshold: settings.quadrantCostThreshold
+                        });
+                        container.appendChild(section);
+                        activeCharts.push(sectionId);
+                        renderChart(sectionId, settings.type, chartSettings[sectionId].selectedModels);
+                    }
+                });
+            } else {
+                // Default charts
+                defaultChartTypes.forEach(typeKey => {
+                    const { section, sectionId } = createChartSection(typeKey);
+                    container.appendChild(section);
+                    activeCharts.push(sectionId);
+                    renderChart(sectionId, chartSettings[sectionId].type, chartSettings[sectionId].selectedModels);
+                });
+                saveToStorage();
+            }
+            
+            updateEmptyState();
+        }
+
+        init();
+    </script>
+</body>
+</html>

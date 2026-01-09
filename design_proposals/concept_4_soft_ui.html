@@ -1,0 +1,395 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Video to PDD - Creative Soft UI</title>
+    <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;700&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --bg-page: #f8f9fa;
+            --primary: #6366f1;
+            /* Indigo */
+            --primary-light: #e0e7ff;
+            --text-dark: #1f2937;
+            --text-light: #6b7280;
+            --shadow-soft: 0 10px 40px -10px rgba(0, 0, 0, 0.08);
+            --shadow-card: 0 4px 6px -1px rgba(0, 0, 0, 0.05), 0 2px 4px -1px rgba(0, 0, 0, 0.03);
+        }
+
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+            font-family: 'DM Sans', sans-serif;
+        }
+
+        body {
+            background-color: var(--bg-page);
+            color: var(--text-dark);
+            height: 100vh;
+            display: grid;
+            grid-template-columns: 80px 1fr;
+            overflow: hidden;
+        }
+
+        /* Slim Sidebar */
+        .sidebar {
+            background: white;
+            border-right: 1px solid #f3f4f6;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            padding: 2rem 0;
+            z-index: 10;
+        }
+
+        .logo {
+            width: 40px;
+            height: 40px;
+            background: linear-gradient(135deg, #6366f1, #a855f7);
+            border-radius: 12px;
+            margin-bottom: 3rem;
+            box-shadow: 0 4px 12px rgba(99, 102, 241, 0.3);
+        }
+
+        .nav-icon {
+            width: 44px;
+            height: 44px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: #9ca3af;
+            border-radius: 12px;
+            margin-bottom: 1rem;
+            cursor: pointer;
+            transition: all 0.3s cubic-bezier(0.34, 1.56, 0.64, 1);
+        }
+
+        .nav-icon:hover {
+            background: #f9fafb;
+            color: var(--primary);
+        }
+
+        .nav-icon.active {
+            background: var(--primary-light);
+            color: var(--primary);
+        }
+
+        .nav-icon svg {
+            width: 20px;
+            height: 20px;
+        }
+
+        /* Main Area */
+        .main-container {
+            display: flex;
+            flex-direction: column;
+            padding: 2rem;
+            background-image:
+                radial-gradient(circle at 80% 0%, rgba(99, 102, 241, 0.05) 0%, transparent 40%),
+                radial-gradient(circle at 10% 100%, rgba(168, 85, 247, 0.05) 0%, transparent 40%);
+        }
+
+        header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 2.5rem;
+        }
+
+        .search-bar {
+            background: white;
+            padding: 12px 20px;
+            border-radius: 30px;
+            width: 300px;
+            border: 1px solid #f3f4f6;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            color: #9ca3af;
+            box-shadow: var(--shadow-card);
+        }
+
+        .welcome-text h1 {
+            font-size: 1.75rem;
+            margin-bottom: 0.25rem;
+        }
+
+        .welcome-text p {
+            color: var(--text-light);
+        }
+
+        /* Dashboard Grid */
+        .dashboard-grid {
+            display: grid;
+            grid-template-columns: 2fr 1fr;
+            gap: 2rem;
+            height: 100%;
+        }
+
+        .section-title {
+            font-size: 1.1rem;
+            font-weight: 700;
+            margin-bottom: 1rem;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+        }
+
+        /* Upload Card */
+        .hero-card {
+            background: white;
+            border-radius: 24px;
+            padding: 2.5rem;
+            position: relative;
+            overflow: hidden;
+            box-shadow: var(--shadow-soft);
+            margin-bottom: 2rem;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+        }
+
+        .hero-content {
+            z-index: 2;
+            max-width: 60%;
+        }
+
+        .hero-card h2 {
+            font-size: 1.5rem;
+            margin-bottom: 0.75rem;
+        }
+
+        .hero-card p {
+            color: var(--text-light);
+            margin-bottom: 1.5rem;
+            line-height: 1.6;
+        }
+
+        .upload-btn {
+            background: #111;
+            color: white;
+            border: none;
+            padding: 14px 28px;
+            border-radius: 12px;
+            font-weight: 600;
+            cursor: pointer;
+            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.1);
+            transition: transform 0.2s;
+        }
+
+        .upload-btn:hover {
+            transform: translateY(-2px);
+        }
+
+        .hero-viz {
+            position: absolute;
+            right: -20px;
+            bottom: -20px;
+            width: 300px;
+            height: 300px;
+            background: linear-gradient(135deg, #e0e7ff 0%, #f3e8ff 100%);
+            border-radius: 50%;
+            z-index: 1;
+        }
+
+        /* Project Cards */
+        .projects-list {
+            display: flex;
+            flex-direction: column;
+            gap: 1rem;
+        }
+
+        .project-item {
+            background: white;
+            padding: 1.25rem;
+            border-radius: 16px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            box-shadow: var(--shadow-card);
+            border: 1px solid rgba(255, 255, 255, 0.5);
+            transition: transform 0.2s;
+        }
+
+        .project-item:hover {
+            transform: scale(1.01);
+        }
+
+        .p-icon {
+            width: 48px;
+            height: 48px;
+            border-radius: 12px;
+            background: #f3f4f6;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            margin-right: 1rem;
+            font-size: 1.2rem;
+        }
+
+        .p-info h4 {
+            font-size: 1rem;
+            margin-bottom: 0.25rem;
+        }
+
+        .p-info span {
+            font-size: 0.85rem;
+            color: var(--text-light);
+        }
+
+        /* Right Panel */
+        .right-panel {
+            background: white;
+            border-radius: 24px;
+            padding: 1.5rem;
+            box-shadow: var(--shadow-soft);
+            height: fit-content;
+        }
+
+        .stat-circle {
+            width: 120px;
+            height: 120px;
+            margin: 2rem auto;
+            border-radius: 50%;
+            background: conic-gradient(var(--primary) 70%, #f3f4f6 0);
+            position: relative;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .stat-circle::after {
+            content: '70%';
+            position: absolute;
+            background: white;
+            width: 100px;
+            height: 100px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: 700;
+            font-size: 1.5rem;
+        }
+    </style>
+</head>
+
+<body>
+    <div class="sidebar">
+        <div class="logo"></div>
+        <div class="nav-icon active">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"
+                stroke-linejoin="round">
+                <rect x="3" y="3" width="7" height="7"></rect>
+                <rect x="14" y="3" width="7" height="7"></rect>
+                <rect x="14" y="14" width="7" height="7"></rect>
+                <rect x="3" y="14" width="7" height="7"></rect>
+            </svg>
+        </div>
+        <div class="nav-icon">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"
+                stroke-linejoin="round">
+                <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path>
+                <polyline points="14 2 14 8 20 8"></polyline>
+                <line x1="16" y1="13" x2="8" y2="13"></line>
+                <line x1="16" y1="17" x2="8" y2="17"></line>
+                <polyline points="10 9 9 9 8 9"></polyline>
+            </svg>
+        </div>
+        <div class="nav-icon">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"
+                stroke-linejoin="round">
+                <circle cx="12" cy="12" r="3"></circle>
+                <path
+                    d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z">
+                </path>
+            </svg>
+        </div>
+    </div>
+
+    <div class="main-container">
+        <header>
+            <div class="welcome-text">
+                <h1>Dasboard</h1>
+                <p>Track your automated process documentation.</p>
+            </div>
+            <div class="search-bar">
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <circle cx="11" cy="11" r="8"></circle>
+                    <line x1="21" y1="21" x2="16.65" y2="16.65"></line>
+                </svg>
+                <span>Search...</span>
+            </div>
+        </header>
+
+        <div class="dashboard-grid">
+            <div class="left-column">
+                <div class="hero-card">
+                    <div class="hero-content">
+                        <h2>Convert Recordings into Logic</h2>
+                        <p>Upload your screen recording and let our Gemini AI engine extract the process flow
+                            automatically.</p>
+                        <button class="upload-btn">Start New Analysis</button>
+                    </div>
+                    <div class="hero-viz"></div>
+                </div>
+
+                <div class="section-title">
+                    Recent Files
+                    <a href="#" style="font-size: 0.9rem; color: var(--primary); text-decoration: none;">View All</a>
+                </div>
+
+                <div class="projects-list">
+                    <div class="project-item">
+                        <div style="display: flex; align-items: center;">
+                            <div class="p-icon">📄</div>
+                            <div class="p-info">
+                                <h4>Invoice_Workflow_v2.mp4</h4>
+                                <span>Process Design Document • 2MB</span>
+                            </div>
+                        </div>
+                        <div
+                            style="font-size: 0.85rem; padding: 4px 10px; background: #ecfdf5; color: #047857; border-radius: 6px;">
+                            Completed
+                        </div>
+                    </div>
+
+                    <div class="project-item">
+                        <div style="display: flex; align-items: center;">
+                            <div class="p-icon">📊</div>
+                            <div class="p-info">
+                                <h4>HR_Onboarding_Nov.mp4</h4>
+                                <span>Flow Analysis • 8.5MB</span>
+                            </div>
+                        </div>
+                        <div
+                            style="font-size: 0.85rem; padding: 4px 10px; background: #fff7ed; color: #c2410c; border-radius: 6px;">
+                            Analyzing
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="right-panel">
+                <div class="section-title">Usage Stats</div>
+                <div class="stat-circle"></div>
+                <div style="text-align: center; margin-top: 1rem;">
+                    <h3 style="font-size: 1.5rem; margin-bottom: 0.5rem;">32 / 50</h3>
+                    <p style="color: var(--text-light); font-size: 0.9rem;">Documents generated this month</p>
+                </div>
+
+                <div style="margin-top: 2rem; padding: 1rem; background: #f8fafc; border-radius: 12px;">
+                    <div style="font-weight: 600; margin-bottom: 0.5rem; font-size: 0.9rem;">Recent Activity</div>
+                    <div style="font-size: 0.8rem; color: var(--text-light); margin-bottom: 0.5rem;">• You exported
+                        'Invoice Workflow'</div>
+                    <div style="font-size: 0.8rem; color: var(--text-light);">• 'HR Onboarding' analysis started</div>
+                </div>
+            </div>
+        </div>
+    </div>
+</body>
+
+</html>

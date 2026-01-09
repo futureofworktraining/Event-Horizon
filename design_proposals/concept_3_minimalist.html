@@ -1,0 +1,274 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Video to PDD - Minimalist Neo</title>
+    <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;700;800&display=swap"
+        rel="stylesheet">
+    <style>
+        :root {
+            --bg-page: #ffffff;
+            --text-main: #18181b;
+            --primary: #000000;
+            --accent: #d4d4d8;
+            /* Zinc 300 */
+            --accent-pop: #fbbf24;
+            /* Amber */
+            --border-style: 2px solid #18181b;
+            --shadow-hard: 4px 4px 0px #18181b;
+        }
+
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+            font-family: 'Plus Jakarta Sans', sans-serif;
+        }
+
+        body {
+            background-color: var(--bg-page);
+            color: var(--text-main);
+            min-height: 100vh;
+            display: flex;
+        }
+
+        /* Sidebar */
+        .sidebar {
+            width: 280px;
+            border-right: var(--border-style);
+            padding: 2rem;
+            display: flex;
+            flex-direction: column;
+            background: #fafafa;
+        }
+
+        .logo {
+            font-weight: 800;
+            font-size: 1.5rem;
+            margin-bottom: 3rem;
+            text-transform: uppercase;
+            letter-spacing: -0.5px;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .logo-box {
+            width: 32px;
+            height: 32px;
+            background: var(--primary);
+            color: white;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            border-radius: 4px;
+        }
+
+        .nav-item {
+            display: block;
+            padding: 12px 16px;
+            margin-bottom: 12px;
+            text-decoration: none;
+            color: var(--text-main);
+            font-weight: 600;
+            border: 2px solid transparent;
+            border-radius: 8px;
+            transition: all 0.2s;
+        }
+
+        .nav-item:hover {
+            background: #e4e4e7;
+        }
+
+        .nav-item.active {
+            background: #fff;
+            border: var(--border-style);
+            box-shadow: 2px 2px 0px #000;
+        }
+
+        /* Main Content */
+        .main {
+            flex: 1;
+            padding: 3rem;
+            background-color: #ffffff;
+            background-image: radial-gradient(#e4e4e7 1px, transparent 1px);
+            background-size: 20px 20px;
+        }
+
+        h1 {
+            font-weight: 800;
+            font-size: 2.5rem;
+            margin-bottom: 2rem;
+            letter-spacing: -1px;
+        }
+
+        .action-bar {
+            margin-bottom: 3rem;
+            display: flex;
+            gap: 1rem;
+        }
+
+        .btn {
+            background: var(--primary);
+            color: white;
+            border: var(--border-style);
+            padding: 16px 32px;
+            font-weight: 700;
+            font-size: 1rem;
+            cursor: pointer;
+            transition: all 0.2s;
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .btn:hover {
+            transform: translate(-2px, -2px);
+            box-shadow: var(--shadow-hard);
+        }
+
+        .btn-secondary {
+            background: white;
+            color: black;
+        }
+
+        /* Cards Container */
+        .grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
+            gap: 2rem;
+        }
+
+        .card {
+            background: white;
+            border: var(--border-style);
+            padding: 24px;
+            transition: all 0.2s;
+            position: relative;
+        }
+
+        .card:hover {
+            transform: translate(-4px, -4px);
+            box-shadow: 6px 6px 0px #000;
+        }
+
+        .badge {
+            display: inline-block;
+            background: #000;
+            color: #fff;
+            padding: 4px 12px;
+            font-size: 0.75rem;
+            font-weight: 700;
+            text-transform: uppercase;
+            margin-bottom: 1rem;
+        }
+
+        .badge.processing {
+            background: var(--accent-pop);
+            color: black;
+            border: 2px solid black;
+        }
+
+        .card h3 {
+            font-size: 1.25rem;
+            font-weight: 800;
+            margin-bottom: 0.5rem;
+        }
+
+        .meta {
+            font-size: 0.9rem;
+            color: #52525b;
+            margin-bottom: 1.5rem;
+            font-weight: 500;
+        }
+
+        .progress-bar {
+            height: 8px;
+            background: #f4f4f5;
+            border: 1px solid #000;
+            border-radius: 99px;
+            overflow: hidden;
+        }
+
+        .progress-fill {
+            height: 100%;
+            background: #000;
+            width: 60%;
+        }
+    </style>
+</head>
+
+<body>
+    <div class="sidebar">
+        <div class="logo">
+            <div class="logo-box">V</div>
+            Video2PDD
+        </div>
+        <nav>
+            <a href="#" class="nav-item active">Dashboard</a>
+            <a href="#" class="nav-item">My Workflows</a>
+            <a href="#" class="nav-item">Team Settings</a>
+            <a href="#" class="nav-item">Billing</a>
+        </nav>
+
+        <div style="margin-top: auto; border-top: 2px solid #000; padding-top: 1rem;">
+            <b>Jane Doe</b><br>
+            <span style="font-size: 0.8rem; color: #555;">Pro Plan Member</span>
+        </div>
+    </div>
+
+    <div class="main">
+        <h1>Hello, Jane.</h1>
+
+        <div class="action-bar">
+            <button class="btn">
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"
+                    stroke-linecap="round" stroke-linejoin="round">
+                    <line x1="12" y1="5" x2="12" y2="19"></line>
+                    <line x1="5" y1="12" x2="19" y2="12"></line>
+                </svg>
+                Upload Video
+            </button>
+            <button class="btn btn-secondary">
+                View Documentation
+            </button>
+        </div>
+
+        <div class="grid">
+            <div class="card">
+                <div class="badge processing">Processing</div>
+                <h3>Q4 Financial Review</h3>
+                <div class="meta">Started 2 mins ago • 450MB</div>
+                <div class="progress-bar">
+                    <div class="progress-fill" style="width: 45%"></div>
+                </div>
+            </div>
+
+            <div class="card">
+                <div class="badge">Success</div>
+                <h3>Onboarding Flow B</h3>
+                <div class="meta">Created yesterday • 12 Steps</div>
+                <div style="display: flex; gap: 10px;">
+                    <button class="btn btn-secondary"
+                        style="padding: 8px 16px; font-size: 0.8rem; border-width: 1px;">Preview</button>
+                    <button class="btn btn-secondary"
+                        style="padding: 8px 16px; font-size: 0.8rem; border-width: 1px;">Export</button>
+                </div>
+            </div>
+
+            <div class="card">
+                <div class="badge">Success</div>
+                <h3>Customer Support QA</h3>
+                <div class="meta">Oct 24, 2025 • 8 Steps</div>
+                <div style="display: flex; gap: 10px;">
+                    <button class="btn btn-secondary"
+                        style="padding: 8px 16px; font-size: 0.8rem; border-width: 1px;">Preview</button>
+                </div>
+            </div>
+        </div>
+    </div>
+</body>
+
+</html>

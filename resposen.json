@@ -1,0 +1,880 @@
+{
+  "processes": [
+    {
+      "process_id": "proc_update_work_item_sha1",
+      "process_name": "Update ACME Work Item with SHA1 Hash",
+      "process_description": "This process involves logging into ACME System 1, navigating to 'Work Items', locating a specific Work Item (Type WI5, Status Open), extracting client details, calculating a SHA1 hash using an external online tool, and updating the Work Item with the generated hash.",
+      "flow": {
+        "nodes": [
+          {
+            "node_id": "start",
+            "node_type": "start"
+          },
+          {
+            "node_id": "step_1",
+            "node_type": "action",
+            "step_number": 1
+          },
+          {
+            "node_id": "step_2",
+            "node_type": "action",
+            "step_number": 2
+          },
+          {
+            "node_id": "step_3",
+            "node_type": "action",
+            "step_number": 3
+          },
+          {
+            "node_id": "step_4",
+            "node_type": "action",
+            "step_number": 4
+          },
+          {
+            "node_id": "step_5",
+            "node_type": "action",
+            "step_number": 5
+          },
+          {
+            "node_id": "step_6",
+            "node_type": "action",
+            "step_number": 6
+          },
+          {
+            "node_id": "step_7",
+            "node_type": "action",
+            "step_number": 7
+          },
+          {
+            "node_id": "step_8",
+            "node_type": "action",
+            "step_number": 8
+          },
+          {
+            "node_id": "decision_cookie_consent",
+            "node_type": "decision",
+            "condition": "Is cookie consent modal displayed?",
+            "condition_description": "Checks if the SHA1-Online website displays a cookie consent modal upon initial load."
+          },
+          {
+            "node_id": "step_9",
+            "node_type": "action",
+            "step_number": 9
+          },
+          {
+            "node_id": "step_10",
+            "node_type": "action",
+            "step_number": 10
+          },
+          {
+            "node_id": "step_11",
+            "node_type": "action",
+            "step_number": 11
+          },
+          {
+            "node_id": "decision_ad_popup",
+            "node_type": "decision",
+            "condition": "Is ad pop-up displayed?",
+            "condition_description": "Checks if an advertisement pop-up obstructs interaction on SHA1-Online."
+          },
+          {
+            "node_id": "step_12",
+            "node_type": "action",
+            "step_number": 12
+          },
+          {
+            "node_id": "step_13",
+            "node_type": "action",
+            "step_number": 13
+          },
+          {
+            "node_id": "step_14",
+            "node_type": "action",
+            "step_number": 14
+          },
+          {
+            "node_id": "step_15",
+            "node_type": "action",
+            "step_number": 15
+          },
+          {
+            "node_id": "step_16",
+            "node_type": "action",
+            "step_number": 16
+          },
+          {
+            "node_id": "step_17",
+            "node_type": "action",
+            "step_number": 17
+          },
+          {
+            "node_id": "step_18",
+            "node_type": "action",
+            "step_number": 18
+          },
+          {
+            "node_id": "step_19",
+            "node_type": "action",
+            "step_number": 19
+          },
+          {
+            "node_id": "step_20",
+            "node_type": "action",
+            "step_number": 20
+          },
+          {
+            "node_id": "step_21",
+            "node_type": "action",
+            "step_number": 21
+          },
+          {
+            "node_id": "step_22",
+            "node_type": "action",
+            "step_number": 22
+          },
+          {
+            "node_id": "decision_update_confirmation",
+            "node_type": "decision",
+            "condition": "Is work item update confirmation pop-up displayed?",
+            "condition_description": "Checks for the success confirmation pop-up after updating the work item."
+          },
+          {
+            "node_id": "step_23",
+            "node_type": "action",
+            "step_number": 23
+          },
+          {
+            "node_id": "step_24",
+            "node_type": "action",
+            "step_number": 24
+          },
+          {
+            "node_id": "end_success",
+            "node_type": "end",
+            "end_type": "success"
+          },
+          {
+            "node_id": "end_failure_cookie",
+            "node_type": "end",
+            "end_type": "failure",
+            "label": "Cookie Consent Failure"
+          },
+          {
+            "node_id": "end_failure_ad",
+            "node_type": "end",
+            "end_type": "failure",
+            "label": "Ad Pop-up Failure"
+          },
+          {
+            "node_id": "end_failure_update",
+            "node_type": "end",
+            "end_type": "failure",
+            "label": "Work Item Update Failure"
+          }
+        ],
+        "edges": [
+          {
+            "edge_id": "edge_start_step1",
+            "from_node_id": "start",
+            "to_node_id": "step_1",
+            "edge_type": "normal"
+          },
+          {
+            "edge_id": "edge_step1_step2",
+            "from_node_id": "step_1",
+            "to_node_id": "step_2",
+            "edge_type": "normal"
+          },
+          {
+            "edge_id": "edge_step2_step3",
+            "from_node_id": "step_2",
+            "to_node_id": "step_3",
+            "edge_type": "normal"
+          },
+          {
+            "edge_id": "edge_step3_step4",
+            "from_node_id": "step_3",
+            "to_node_id": "step_4",
+            "edge_type": "normal"
+          },
+          {
+            "edge_id": "edge_step4_step5",
+            "from_node_id": "step_4",
+            "to_node_id": "step_5",
+            "edge_type": "normal"
+          },
+          {
+            "edge_id": "edge_step5_step6",
+            "from_node_id": "step_5",
+            "to_node_id": "step_6",
+            "edge_type": "normal"
+          },
+          {
+            "edge_id": "edge_step6_step7",
+            "from_node_id": "step_6",
+            "to_node_id": "step_7",
+            "edge_type": "normal"
+          },
+          {
+            "edge_id": "edge_step7_step8",
+            "from_node_id": "step_7",
+            "to_node_id": "step_8",
+            "edge_type": "normal"
+          },
+          {
+            "edge_id": "edge_step8_decision_cookie_consent",
+            "from_node_id": "step_8",
+            "to_node_id": "decision_cookie_consent",
+            "edge_type": "normal"
+          },
+          {
+            "edge_id": "edge_decision_cookie_consent_yes_step9",
+            "from_node_id": "decision_cookie_consent",
+            "to_node_id": "step_9",
+            "label": "Yes (Consent)"
+          },
+          {
+            "edge_id": "edge_decision_cookie_consent_no_failure",
+            "from_node_id": "decision_cookie_consent",
+            "to_node_id": "end_failure_cookie",
+            "label": "No (No Consent or Error)"
+          },
+          {
+            "edge_id": "edge_step9_step10",
+            "from_node_id": "step_9",
+            "to_node_id": "step_10",
+            "edge_type": "normal"
+          },
+          {
+            "edge_id": "edge_step10_step11",
+            "from_node_id": "step_10",
+            "to_node_id": "step_11",
+            "edge_type": "normal"
+          },
+          {
+            "edge_id": "edge_step11_decision_ad_popup",
+            "from_node_id": "step_11",
+            "to_node_id": "decision_ad_popup",
+            "edge_type": "normal"
+          },
+          {
+            "edge_id": "edge_decision_ad_popup_yes_step12",
+            "from_node_id": "decision_ad_popup",
+            "to_node_id": "step_12",
+            "label": "Yes (Ad Appears)"
+          },
+          {
+            "edge_id": "edge_decision_ad_popup_no_failure",
+            "from_node_id": "decision_ad_popup",
+            "to_node_id": "end_failure_ad",
+            "label": "No (Ad Not Found)"
+          },
+          {
+            "edge_id": "edge_step12_step13",
+            "from_node_id": "step_12",
+            "to_node_id": "step_13",
+            "edge_type": "normal"
+          },
+          {
+            "edge_id": "edge_step13_step14",
+            "from_node_id": "step_13",
+            "to_node_id": "step_14",
+            "edge_type": "normal"
+          },
+          {
+            "edge_id": "edge_step14_step15",
+            "from_node_id": "step_14",
+            "to_node_id": "step_15",
+            "edge_type": "normal"
+          },
+          {
+            "edge_id": "edge_step15_step16",
+            "from_node_id": "step_15",
+            "to_node_id": "step_16",
+            "edge_type": "normal"
+          },
+          {
+            "edge_id": "edge_step16_step17",
+            "from_node_id": "step_16",
+            "to_node_id": "step_17",
+            "edge_type": "normal"
+          },
+          {
+            "edge_id": "edge_step17_step18",
+            "from_node_id": "step_17",
+            "to_node_id": "step_18",
+            "edge_type": "normal"
+          },
+          {
+            "edge_id": "edge_step18_step19",
+            "from_node_id": "step_18",
+            "to_node_id": "step_19",
+            "edge_type": "normal"
+          },
+          {
+            "edge_id": "edge_step19_step20",
+            "from_node_id": "step_19",
+            "to_node_id": "step_20",
+            "edge_type": "normal"
+          },
+          {
+            "edge_id": "edge_step20_step21",
+            "from_node_id": "step_20",
+            "to_node_id": "step_21",
+            "edge_type": "normal"
+          },
+          {
+            "edge_id": "edge_step21_step22",
+            "from_node_id": "step_21",
+            "to_node_id": "step_22",
+            "edge_type": "normal"
+          },
+          {
+            "edge_id": "edge_step22_decision_update_confirmation",
+            "from_node_id": "step_22",
+            "to_node_id": "decision_update_confirmation",
+            "edge_type": "normal"
+          },
+          {
+            "edge_id": "edge_decision_update_confirmation_yes_step23",
+            "from_node_id": "decision_update_confirmation",
+            "to_node_id": "step_23",
+            "label": "Yes (Confirmed)"
+          },
+          {
+            "edge_id": "edge_decision_update_confirmation_no_failure",
+            "from_node_id": "decision_update_confirmation",
+            "to_node_id": "end_failure_update",
+            "label": "No (No Confirmation)"
+          },
+          {
+            "edge_id": "edge_step23_step24",
+            "from_node_id": "step_23",
+            "to_node_id": "step_24",
+            "edge_type": "normal"
+          },
+          {
+            "edge_id": "edge_step24_end_success",
+            "from_node_id": "step_24",
+            "to_node_id": "end_success",
+            "edge_type": "normal"
+          }
+        ]
+      },
+      "steps": [
+        {
+          "step_number": 1,
+          "timestamp": "00:09.0",
+          "flow_node_id": "step_1",
+          "action_type": "ui_interaction",
+          "specific_action": "type",
+          "description": "User types email 'futureofworkchannel@gmail.com' into the 'Email' text field.",
+          "application": "ACME System 1",
+          "screen_name": "Login",
+          "screenshot_required": true,
+          "data_info": {
+            "value": "futureofworkchannel@gmail.com",
+            "data_type": "email",
+            "source": "user_input",
+            "is_sensitive": false
+          },
+          "ui_element": {
+            "element_name": "Email text field",
+            "element_type": "text_field",
+            "location_description": "Next to 'Email' label",
+            "screen_region": "middle_center"
+          }
+        },
+        {
+          "step_number": 2,
+          "timestamp": "00:11.7",
+          "flow_node_id": "step_2",
+          "action_type": "ui_interaction",
+          "specific_action": "type",
+          "description": "User types password into the 'Password' text field.",
+          "application": "ACME System 1",
+          "screen_name": "Login",
+          "screenshot_required": true,
+          "data_info": {
+            "value": "[MASKED]",
+            "data_type": "password",
+            "source": "user_input",
+            "is_sensitive": true
+          },
+          "ui_element": {
+            "element_name": "Password text field",
+            "element_type": "text_field",
+            "location_description": "Next to 'Password' label",
+            "screen_region": "middle_center"
+          }
+        },
+        {
+          "step_number": 3,
+          "timestamp": "00:15.5",
+          "flow_node_id": "step_3",
+          "action_type": "ui_interaction",
+          "specific_action": "click",
+          "description": "User clicks the 'Login' button.",
+          "application": "ACME System 1",
+          "screen_name": "Login",
+          "screenshot_required": true,
+          "ui_element": {
+            "element_name": "Login button",
+            "element_type": "button",
+            "location_description": "Below Password field",
+            "screen_region": "middle_center"
+          }
+        },
+        {
+          "step_number": 4,
+          "timestamp": "00:22.0",
+          "flow_node_id": "step_4",
+          "action_type": "ui_interaction",
+          "specific_action": "click",
+          "description": "User clicks the 'Work Items' button on the Dashboard.",
+          "application": "ACME System 1",
+          "screen_name": "Dashboard",
+          "screenshot_required": true,
+          "ui_element": {
+            "element_name": "Work Items button",
+            "element_type": "button",
+            "location_description": "Left sidebar menu, second option",
+            "screen_region": "middle_left"
+          }
+        },
+        {
+          "step_number": 5,
+          "timestamp": "00:38.0",
+          "flow_node_id": "step_5",
+          "action_type": "ui_interaction",
+          "specific_action": "click",
+          "description": "User clicks the pagination number '2' to navigate to the second page of Work Items.",
+          "application": "ACME System 1",
+          "screen_name": "Work Items",
+          "screenshot_required": true,
+          "ui_element": {
+            "element_name": "Pagination link '2'",
+            "element_type": "link",
+            "location_description": "Bottom center of the table",
+            "screen_region": "bottom_center"
+          }
+        },
+        {
+          "step_number": 6,
+          "timestamp": "00:43.0",
+          "flow_node_id": "step_6",
+          "action_type": "ui_interaction",
+          "specific_action": "click",
+          "description": "User clicks the pagination number '3' to navigate to the third page of Work Items.",
+          "application": "ACME System 1",
+          "screen_name": "Work Items",
+          "screenshot_required": true,
+          "ui_element": {
+            "element_name": "Pagination link '3'",
+            "element_type": "link",
+            "location_description": "Bottom center of the table",
+            "screen_region": "bottom_center"
+          }
+        },
+        {
+          "step_number": 7,
+          "timestamp": "00:50.0",
+          "flow_node_id": "step_7",
+          "action_type": "ui_interaction",
+          "specific_action": "click",
+          "description": "User clicks the 'View Details' icon for Work Item ID '98271026' (Type WI5, Status Open).",
+          "application": "ACME System 1",
+          "screen_name": "Work Items",
+          "screenshot_required": true,
+          "ui_element": {
+            "element_name": "View Details icon",
+            "element_type": "icon",
+            "location_description": "In 'Actions' column next to Work Item ID '98271026'",
+            "screen_region": "middle_left"
+          }
+        },
+        {
+          "step_number": 8,
+          "timestamp": "00:57.0",
+          "flow_node_id": "step_8",
+          "action_type": "navigation",
+          "specific_action": "navigate_to_url",
+          "description": "User opens a new browser tab and navigates to 'sha1-online.com'.",
+          "application": "Google Chrome",
+          "screen_name": "Google",
+          "screenshot_required": true,
+          "data_info": {
+            "value": "sha1-online.com",
+            "data_type": "url",
+            "source": "user_input",
+            "is_sensitive": false
+          }
+        },
+        {
+          "step_number": 9,
+          "timestamp": "01:03.9",
+          "flow_node_id": "step_9",
+          "action_type": "ui_interaction",
+          "specific_action": "click",
+          "description": "User clicks the 'Consent' button on the cookie consent modal.",
+          "application": "SHA1-Online",
+          "screen_name": "SHA1 and other hash functions online generator",
+          "screenshot_required": true,
+          "ui_element": {
+            "element_name": "Consent button",
+            "element_type": "button",
+            "location_description": "On the cookie consent modal",
+            "screen_region": "full_screen"
+          }
+        },
+        {
+          "step_number": 10,
+          "timestamp": "01:03.0",
+          "flow_node_id": "step_10",
+          "action_type": "data_transfer",
+          "specific_action": "copy",
+          "description": "User copies the 'Client ID' (QS96336) from 'Client Information Details' in ACME System 1.",
+          "application": "ACME System 1",
+          "screen_name": "Work Items - Work Item Details",
+          "screenshot_required": false,
+          "data_info": {
+            "value": "QS96336",
+            "data_type": "text",
+            "source": "system_generated",
+            "is_sensitive": false
+          },
+          "ui_element": {
+            "element_name": "Client ID value",
+            "element_type": "paragraph",
+            "location_description": "Value associated with 'Client ID' label",
+            "screen_region": "middle_left"
+          }
+        },
+        {
+          "step_number": 11,
+          "timestamp": "01:05.9",
+          "flow_node_id": "step_11",
+          "action_type": "data_transfer",
+          "specific_action": "paste",
+          "description": "User pastes the copied 'Client ID' into the 'text input' field on SHA1-Online.",
+          "application": "SHA1-Online",
+          "screen_name": "SHA1 and other hash functions online generator",
+          "screenshot_required": true,
+          "data_info": {
+            "value": "QS96336",
+            "data_type": "text",
+            "source": "system_generated",
+            "is_sensitive": false
+          },
+          "ui_element": {
+            "element_name": "text input field",
+            "element_type": "text_field",
+            "location_description": "Input field next to 'hash' button",
+            "screen_region": "middle_center"
+          }
+        },
+        {
+          "step_number": 12,
+          "timestamp": "01:08.0",
+          "flow_node_id": "step_12",
+          "action_type": "data_transfer",
+          "specific_action": "copy",
+          "description": "User copies the 'Client Name' (Domi Chabot) from 'Client Information Details' in ACME System 1.",
+          "application": "ACME System 1",
+          "screen_name": "Work Items - Work Item Details",
+          "screenshot_required": false,
+          "data_info": {
+            "value": "Domi Chabot",
+            "data_type": "text",
+            "source": "system_generated",
+            "is_sensitive": false
+          },
+          "ui_element": {
+            "element_name": "Client Name value",
+            "element_type": "paragraph",
+            "location_description": "Value associated with 'Client Name' label",
+            "screen_region": "middle_left"
+          }
+        },
+        {
+          "step_number": 13,
+          "timestamp": "01:10.9",
+          "flow_node_id": "step_13",
+          "action_type": "ui_interaction",
+          "specific_action": "click",
+          "description": "User closes the advertisement pop-up by clicking the 'Close' button.",
+          "application": "SHA1-Online",
+          "screen_name": "SHA1 and other hash functions online generator",
+          "screenshot_required": true,
+          "ui_element": {
+            "element_name": "Close button on ad",
+            "element_type": "button",
+            "location_description": "Bottom left of the ad pop-up",
+            "screen_region": "full_screen"
+          }
+        },
+        {
+          "step_number": 14,
+          "timestamp": "01:12.0",
+          "flow_node_id": "step_14",
+          "action_type": "data_transfer",
+          "specific_action": "paste",
+          "description": "User pastes the copied 'Client Name' into the 'text input' field on SHA1-Online.",
+          "application": "SHA1-Online",
+          "screen_name": "SHA1 and other hash functions online generator",
+          "screenshot_required": true,
+          "data_info": {
+            "value": "Domi Chabot",
+            "data_type": "text",
+            "source": "system_generated",
+            "is_sensitive": false
+          },
+          "ui_element": {
+            "element_name": "text input field",
+            "element_type": "text_field",
+            "location_description": "Input field next to 'hash' button",
+            "screen_region": "middle_center"
+          }
+        },
+        {
+          "step_number": 15,
+          "timestamp": "01:14.0",
+          "flow_node_id": "step_15",
+          "action_type": "data_transfer",
+          "specific_action": "copy",
+          "description": "User copies the 'Client Country' (Germany) from 'Client Information Details' in ACME System 1.",
+          "application": "ACME System 1",
+          "screen_name": "Work Items - Work Item Details",
+          "screenshot_required": false,
+          "data_info": {
+            "value": "Germany",
+            "data_type": "text",
+            "source": "system_generated",
+            "is_sensitive": false
+          },
+          "ui_element": {
+            "element_name": "Client Country value",
+            "element_type": "paragraph",
+            "location_description": "Value associated with 'Client Country' label",
+            "screen_region": "middle_left"
+          }
+        },
+        {
+          "step_number": 16,
+          "timestamp": "01:15.0",
+          "flow_node_id": "step_16",
+          "action_type": "data_transfer",
+          "specific_action": "paste",
+          "description": "User pastes the copied 'Client Country' into the 'text input' field on SHA1-Online.",
+          "application": "SHA1-Online",
+          "screen_name": "SHA1 and other hash functions online generator",
+          "screenshot_required": true,
+          "data_info": {
+            "value": "Germany",
+            "data_type": "text",
+            "source": "system_generated",
+            "is_sensitive": false
+          },
+          "ui_element": {
+            "element_name": "text input field",
+            "element_type": "text_field",
+            "location_description": "Input field next to 'hash' button",
+            "screen_region": "middle_center"
+          }
+        },
+        {
+          "step_number": 17,
+          "timestamp": "01:17.0",
+          "flow_node_id": "step_17",
+          "action_type": "ui_interaction",
+          "specific_action": "click",
+          "description": "User clicks the 'hash' button to generate the SHA1 hash.",
+          "application": "SHA1-Online",
+          "screen_name": "SHA1 and other hash functions online generator",
+          "screenshot_required": true,
+          "ui_element": {
+            "element_name": "Hash button",
+            "element_type": "button",
+            "location_description": "To the right of the text input field",
+            "screen_region": "middle_center"
+          }
+        },
+        {
+          "step_number": 18,
+          "timestamp": "01:19.0",
+          "flow_node_id": "step_18",
+          "action_type": "data_transfer",
+          "specific_action": "copy",
+          "description": "User copies the generated SHA1 hash value.",
+          "application": "SHA1-Online",
+          "screen_name": "SHA1 and other hash functions online generator",
+          "screenshot_required": true,
+          "data_info": {
+            "value": "e0e697530033bd3fed511531954a73a4c5397c5",
+            "data_type": "text",
+            "source": "system_generated",
+            "is_sensitive": false
+          },
+          "ui_element": {
+            "element_name": "Generated hash value",
+            "element_type": "paragraph",
+            "location_description": "Text displaying the SHA1 hash result",
+            "screen_region": "middle_center"
+          }
+        },
+        {
+          "step_number": 19,
+          "timestamp": "01:21.0",
+          "flow_node_id": "step_19",
+          "action_type": "navigation",
+          "specific_action": "switch_tab",
+          "description": "User switches back to the ACME System 1 browser tab.",
+          "application": "Google Chrome",
+          "screen_name": "Work Items - Work Item Details",
+          "screenshot_required": true
+        },
+        {
+          "step_number": 20,
+          "timestamp": "01:23.0",
+          "flow_node_id": "step_20",
+          "action_type": "ui_interaction",
+          "specific_action": "click",
+          "description": "User clicks the 'Update Work Item' button.",
+          "application": "ACME System 1",
+          "screen_name": "Work Items - Work Item Details",
+          "screenshot_required": true,
+          "ui_element": {
+            "element_name": "Update Work Item button",
+            "element_type": "button",
+            "location_description": "Below work item details",
+            "screen_region": "middle_center"
+          }
+        },
+        {
+          "step_number": 21,
+          "timestamp": "01:28.0",
+          "flow_node_id": "step_21",
+          "action_type": "data_transfer",
+          "specific_action": "paste",
+          "description": "User pastes the copied SHA1 hash into the 'Add Comments' text area on the 'Update Work Item' modal.",
+          "application": "ACME System 1",
+          "screen_name": "Update Work Item Modal",
+          "screenshot_required": true,
+          "data_info": {
+            "value": "e0e697530033bd3fed511531954a73a4c5397c5",
+            "data_type": "text",
+            "source": "system_generated",
+            "is_sensitive": false
+          },
+          "ui_element": {
+            "element_name": "Add Comments text area",
+            "element_type": "text_area",
+            "location_description": "Text area in the Update Work Item modal",
+            "screen_region": "full_screen"
+          }
+        },
+        {
+          "step_number": 22,
+          "timestamp": "01:30.0",
+          "flow_node_id": "step_22",
+          "action_type": "ui_interaction",
+          "specific_action": "select",
+          "description": "User selects 'Completed' from the 'New Status' dropdown on the 'Update Work Item' modal.",
+          "application": "ACME System 1",
+          "screen_name": "Update Work Item Modal",
+          "screenshot_required": true,
+          "data_info": {
+            "value": "Completed",
+            "data_type": "text",
+            "source": "user_input",
+            "is_sensitive": false
+          },
+          "ui_element": {
+            "element_name": "New Status dropdown",
+            "element_type": "dropdown",
+            "location_description": "Dropdown in the Update Work Item modal",
+            "screen_region": "full_screen"
+          }
+        },
+        {
+          "step_number": 23,
+          "timestamp": "01:33.5",
+          "flow_node_id": "step_23",
+          "action_type": "ui_interaction",
+          "specific_action": "click",
+          "description": "User clicks the 'Update Work Item' button within the modal to save changes.",
+          "application": "ACME System 1",
+          "screen_name": "Update Work Item Modal",
+          "screenshot_required": true,
+          "ui_element": {
+            "element_name": "Update Work Item button",
+            "element_type": "button",
+            "location_description": "Bottom of the Update Work Item modal",
+            "screen_region": "full_screen"
+          }
+        },
+        {
+          "step_number": 24,
+          "timestamp": "01:37.0",
+          "flow_node_id": "step_24",
+          "action_type": "ui_interaction",
+          "specific_action": "click",
+          "description": "User clicks 'OK' on the 'Work Item was updated accordingly' confirmation pop-up.",
+          "application": "ACME System 1",
+          "screen_name": "Update Work Item Confirmation",
+          "screenshot_required": true,
+          "ui_element": {
+            "element_name": "OK button",
+            "element_type": "button",
+            "location_description": "On the confirmation pop-up",
+            "screen_region": "full_screen"
+          }
+        },
+        {
+          "step_number": 25,
+          "timestamp": "01:41.0",
+          "flow_node_id": "step_25",
+          "action_type": "ui_interaction",
+          "specific_action": "click",
+          "description": "User closes the 'Update Work Item' modal by clicking the 'X' button.",
+          "application": "ACME System 1",
+          "screen_name": "Update Work Item Modal",
+          "screenshot_required": true,
+          "ui_element": {
+            "element_name": "Close button (X)",
+            "element_type": "icon",
+            "location_description": "Top right corner of the modal",
+            "screen_region": "top_right"
+          }
+        }
+      ],
+      "applications": [
+        {
+          "name": "ACME System 1",
+          "type": "web_application",
+          "url": "https://acme-test.uipath.com/login"
+        },
+        {
+          "name": "Google Chrome",
+          "type": "desktop_application"
+        },
+        {
+          "name": "SHA1-Online",
+          "type": "web_application",
+          "url": "https://sha1-online.com"
+        }
+      ],
+      "business_rules_observed": [
+        "Work Items must be updated with a SHA1 hash derived from Client ID, Client Name, and Client Country.",
+        "Work Items of Type WI5 with 'Open' status are targeted for this process."
+      ],
+      "exceptions_noted": [],
+      "is_main_process": true,
+      "parent_process_id": "null",
+      "recording_duration_seconds": 107,
+      "total_steps": 25,
+      "video_end_timestamp": "01:47.0",
+      "video_start_timestamp": "00:00.0"
+    }
+  ]
+}
