@@ -29,6 +29,7 @@ interface ProcessHeaderProps {
   status?: string;
   processData: any;
   jobId?: Id<"jobs">;
+  rootProcessName?: string;
 }
 
 function formatDuration(seconds: number): string {
@@ -45,6 +46,7 @@ export function ProcessHeader({
   status,
   processData,
   jobId,
+  rootProcessName,
 }: ProcessHeaderProps) {
   const router = useRouter();
   const [isEditOpen, setIsEditOpen] = useState(false);
@@ -284,7 +286,11 @@ export function ProcessHeader({
               </DialogContent>
             </Dialog>
 
-            <ExportButton processData={processData} processName={processName} />
+            <ExportButton
+              processData={processData}
+              processName={rootProcessName || processName}
+              jobId={jobId}
+            />
             {jobId && <RawResponseViewer jobId={jobId} />}
           </div>
         </div>

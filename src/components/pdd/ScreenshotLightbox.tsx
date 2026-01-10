@@ -29,6 +29,7 @@ interface BoundingBox {
 }
 
 interface SensitiveInfoBox {
+  id?: string;
   label: string;
   box_2d: number[];
   found: boolean;
@@ -102,7 +103,7 @@ export function ScreenshotLightbox({
 
   // Box editing state
   type ResizeHandle = "nw" | "ne" | "sw" | "se" | "n" | "s" | "e" | "w";
-  type SelectedBox = { type: "ui" } | { type: "sensitive"; index: number };
+  type SelectedBox = { type: "ui" } | { type: "sensitive"; index: number; id?: string };
   const [selectedBox, setSelectedBox] = useState<SelectedBox | null>(null);
   const [isResizing, setIsResizing] = useState(false);
   const [isMoving, setIsMoving] = useState(false);
@@ -419,15 +420,18 @@ export function ScreenshotLightbox({
     setLabelInput("");
   }, []);
 
-  const handleDeleteSensitiveBox = useCallback(async (index: number) => {
+  const handleDeleteSensitiveBox = useCallback(async (index: number, boxId?: string) => {
     if (!step) return;
     try {
       await removeSensitiveBox({
         stepId: step._id as Id<"steps">,
         boxIndex: index,
+        boxId: boxId,
       });
     } catch (error) {
       console.error("Failed to delete sensitive box:", error);
+      // Even if server fails, we might want to optimistically update UI 
+      // but Mutation handles it usually.
     }
   }, [step, removeSensitiveBox]);
 
@@ -1034,8 +1038,8 @@ export function ScreenshotLightbox({
                 {step.cropCoordinates && !isNoCrop(step.cropCoordinates) && (
                   <div className="absolute top-2 right-2 bg-orange-500 text-white text-xs px-2 py-1 rounded-full z-30 flex items-center gap-1">
                     <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="h-3 w-3">
-                      <path d="M6 2v14a2 2 0 0 0 2 2h14"/>
-                      <path d="M18 22V8a2 2 0 0 0-2-2H2"/>
+                      <path d="M6 2v14a2 2 0 0 0 2 2h14" />
+                      <path d="M18 22V8a2 2 0 0 0-2-2H2" />
                     </svg>
                     Cropped
                   </div>
@@ -1061,7 +1065,7 @@ export function ScreenshotLightbox({
                       if (!box.box_2d || box.box_2d.length !== 4 || !box.found) {
                         return null;
                       }
-                      const boxType: SelectedBox = { type: "sensitive", index: idx };
+                      const boxType: SelectedBox = { type: "sensitive", index: idx, id: box.id };
                       const coords = getBoxCoords(boxType, box.box_2d);
                       if (!coords) return null; // Box is outside crop region
                       const [ymin, xmin, ymax, xmax] = coords;
@@ -1131,7 +1135,7 @@ export function ScreenshotLightbox({
                             <button
                               onClick={(e) => {
                                 e.stopPropagation();
-                                handleDeleteSensitiveBox(idx);
+                                handleDeleteSensitiveBox(idx, box.id);
                               }}
                               className="ml-1 opacity-0 group-hover:opacity-100 hover:bg-red-700 rounded px-1 transition-opacity"
                               title="Delete this sensitive box"
@@ -1335,11 +1339,10 @@ export function ScreenshotLightbox({
                     {canShowElement && (
                       <button
                         onClick={() => setShowElement(!showElement)}
-                        className={`px-2 py-0.5 rounded text-xs transition-colors flex items-center gap-1 ${
-                          showElement
+                        className={`px-2 py-0.5 rounded text-xs transition-colors flex items-center gap-1 ${showElement
                             ? "bg-blue-600 text-white hover:bg-blue-700"
                             : "bg-blue-100 text-blue-700 hover:bg-blue-200"
-                        }`}
+                          }`}
                       >
                         <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="h-3.5 w-3.5">
                           <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z" />
@@ -1365,13 +1368,12 @@ export function ScreenshotLightbox({
                             }
                           }}
                           disabled={isDetectingUi}
-                          className={`px-2 py-0.5 rounded text-xs transition-colors flex items-center gap-1 ${
-                            isDetectingUi
+                          className={`px-2 py-0.5 rounded text-xs transition-colors flex items-center gap-1 ${isDetectingUi
                               ? "bg-green-400 text-white cursor-wait"
                               : showDetectUiDialog
                                 ? "bg-green-600 text-white"
                                 : "bg-green-100 text-green-700 hover:bg-green-200"
-                          }`}
+                            }`}
                           title={step.boundingBox?.found ? "Re-detect UI element bounding box" : "Detect UI element bounding box"}
                         >
                           {isDetectingUi ? (
@@ -1432,13 +1434,12 @@ export function ScreenshotLightbox({
                           }
                         }}
                         disabled={isDetectingSensitive || (showDetectSensitiveDialog && !detectSensitivePrompt.trim())}
-                        className={`px-2 py-0.5 rounded text-xs transition-colors flex items-center gap-1 ${
-                          isDetectingSensitive
+                        className={`px-2 py-0.5 rounded text-xs transition-colors flex items-center gap-1 ${isDetectingSensitive
                             ? "bg-red-400 text-white cursor-wait"
                             : showDetectSensitiveDialog
                               ? "bg-red-600 text-white disabled:bg-red-400"
                               : "bg-red-100 text-red-700 hover:bg-red-200"
-                        }`}
+                          }`}
                         title={step.sensitiveInfoBoxes?.length ? "Re-detect sensitive information" : "Detect sensitive information"}
                       >
                         {isDetectingSensitive ? (
@@ -1448,7 +1449,7 @@ export function ScreenshotLightbox({
                           </svg>
                         ) : (
                           <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="h-3.5 w-3.5">
-                            <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/>
+                            <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z" />
                             <circle cx="11" cy="11" r="4" />
                             <path d="m15 15-2-2" />
                           </svg>
@@ -1484,11 +1485,10 @@ export function ScreenshotLightbox({
                     {/* Draw UI Element button */}
                     <button
                       onClick={() => setDrawingMode(drawingMode === "ui-element" ? "none" : "ui-element")}
-                      className={`px-2 py-0.5 rounded text-xs transition-colors flex items-center gap-1 ${
-                        drawingMode === "ui-element"
+                      className={`px-2 py-0.5 rounded text-xs transition-colors flex items-center gap-1 ${drawingMode === "ui-element"
                           ? "bg-green-600 text-white hover:bg-green-700"
                           : "bg-green-100 text-green-700 hover:bg-green-200"
-                      }`}
+                        }`}
                       title="Draw UI element bounding box"
                     >
                       <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="h-3.5 w-3.5">
@@ -1500,15 +1500,14 @@ export function ScreenshotLightbox({
                     {/* Draw Sensitive button */}
                     <button
                       onClick={() => setDrawingMode(drawingMode === "sensitive" ? "none" : "sensitive")}
-                      className={`px-2 py-0.5 rounded text-xs transition-colors flex items-center gap-1 ${
-                        drawingMode === "sensitive"
+                      className={`px-2 py-0.5 rounded text-xs transition-colors flex items-center gap-1 ${drawingMode === "sensitive"
                           ? "bg-red-600 text-white hover:bg-red-700"
                           : "bg-red-100 text-red-700 hover:bg-red-200"
-                      }`}
+                        }`}
                       title="Draw sensitive information bounding box"
                     >
                       <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="h-3.5 w-3.5">
-                        <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/>
+                        <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z" />
                       </svg>
                       {drawingMode === "sensitive" ? "Cancel" : "Draw Sensitive"}
                     </button>
@@ -1517,13 +1516,12 @@ export function ScreenshotLightbox({
                       <button
                         onClick={() => setShowScreenshotMenu(!showScreenshotMenu)}
                         disabled={isUploadingScreenshot || isReverting}
-                        className={`px-2 py-0.5 rounded text-xs transition-colors flex items-center gap-1 ${
-                          showScreenshotMenu
+                        className={`px-2 py-0.5 rounded text-xs transition-colors flex items-center gap-1 ${showScreenshotMenu
                             ? "bg-gray-600 text-white"
                             : (isUploadingScreenshot || isReverting)
                               ? "bg-gray-300 text-gray-500 cursor-wait"
                               : "bg-gray-100 text-gray-700 hover:bg-gray-200"
-                        }`}
+                          }`}
                       >
                         {(isUploadingScreenshot || isReverting) ? (
                           <svg className="animate-spin h-3.5 w-3.5" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
@@ -1532,14 +1530,14 @@ export function ScreenshotLightbox({
                           </svg>
                         ) : (
                           <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="h-3.5 w-3.5">
-                            <rect x="3" y="3" width="18" height="18" rx="2" ry="2"/>
-                            <circle cx="8.5" cy="8.5" r="1.5"/>
-                            <polyline points="21 15 16 10 5 21"/>
+                            <rect x="3" y="3" width="18" height="18" rx="2" ry="2" />
+                            <circle cx="8.5" cy="8.5" r="1.5" />
+                            <polyline points="21 15 16 10 5 21" />
                           </svg>
                         )}
                         {isUploadingScreenshot ? "Uploading..." : isReverting ? "Reverting..." : "Edit Screenshot"}
                         <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="h-3 w-3">
-                          <polyline points="6 9 12 15 18 9"/>
+                          <polyline points="6 9 12 15 18 9" />
                         </svg>
                       </button>
                       {/* Screenshot menu dropdown */}
@@ -1553,9 +1551,9 @@ export function ScreenshotLightbox({
                             className="w-full px-3 py-1.5 text-left text-sm hover:bg-gray-100 flex items-center gap-2"
                           >
                             <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="h-4 w-4">
-                              <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>
-                              <polyline points="17 8 12 3 7 8"/>
-                              <line x1="12" y1="3" x2="12" y2="15"/>
+                              <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
+                              <polyline points="17 8 12 3 7 8" />
+                              <line x1="12" y1="3" x2="12" y2="15" />
                             </svg>
                             Upload new image
                           </button>
@@ -1568,8 +1566,8 @@ export function ScreenshotLightbox({
                               className="w-full px-3 py-1.5 text-left text-sm hover:bg-gray-100 flex items-center gap-2"
                             >
                               <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="h-4 w-4">
-                                <rect x="9" y="9" width="13" height="13" rx="2" ry="2"/>
-                                <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/>
+                                <rect x="9" y="9" width="13" height="13" rx="2" ry="2" />
+                                <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1" />
                               </svg>
                               Clone from step
                             </button>
@@ -1583,8 +1581,8 @@ export function ScreenshotLightbox({
                               className="w-full px-3 py-1.5 text-left text-sm hover:bg-gray-100 flex items-center gap-2"
                             >
                               <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="h-4 w-4">
-                                <polygon points="23 7 16 12 23 17 23 7"/>
-                                <rect x="1" y="5" width="15" height="14" rx="2" ry="2"/>
+                                <polygon points="23 7 16 12 23 17 23 7" />
+                                <rect x="1" y="5" width="15" height="14" rx="2" ry="2" />
                               </svg>
                               Capture from video
                             </button>
@@ -1598,8 +1596,8 @@ export function ScreenshotLightbox({
                             className="w-full px-3 py-1.5 text-left text-sm hover:bg-gray-100 flex items-center gap-2"
                           >
                             <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="h-4 w-4">
-                              <path d="M6 2v14a2 2 0 0 0 2 2h14"/>
-                              <path d="M18 22V8a2 2 0 0 0-2-2H2"/>
+                              <path d="M6 2v14a2 2 0 0 0 2 2h14" />
+                              <path d="M18 22V8a2 2 0 0 0-2-2H2" />
                             </svg>
                             Crop image
                           </button>
@@ -1612,8 +1610,8 @@ export function ScreenshotLightbox({
                               className="w-full px-3 py-1.5 text-left text-sm hover:bg-gray-100 flex items-center gap-2 text-orange-600"
                             >
                               <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="h-4 w-4">
-                                <path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"/>
-                                <path d="M3 3v5h5"/>
+                                <path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8" />
+                                <path d="M3 3v5h5" />
                               </svg>
                               Reset crop
                             </button>
@@ -1633,8 +1631,8 @@ export function ScreenshotLightbox({
                                   </svg>
                                 ) : (
                                   <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="h-4 w-4">
-                                    <path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"/>
-                                    <path d="M3 3v5h5"/>
+                                    <path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8" />
+                                    <path d="M3 3v5h5" />
                                   </svg>
                                 )}
                                 {isReverting ? "Reverting..." : "Revert to original"}
@@ -1659,11 +1657,10 @@ export function ScreenshotLightbox({
                 {hasDetails && (
                   <button
                     onClick={() => setShowDetails(!showDetails)}
-                    className={`flex items-center gap-1 px-3 py-1.5 rounded-md border transition-colors ${
-                      showDetails
+                    className={`flex items-center gap-1 px-3 py-1.5 rounded-md border transition-colors ${showDetails
                         ? "bg-primary text-primary-foreground"
                         : "bg-background hover:bg-muted"
-                    }`}
+                      }`}
                   >
                     <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="h-4 w-4">
                       <circle cx="12" cy="12" r="10" />
@@ -1732,11 +1729,10 @@ export function ScreenshotLightbox({
                     <button
                       onClick={handleSaveBox}
                       disabled={!labelInput.trim()}
-                      className={`px-4 py-2 text-sm text-white rounded-md transition-colors ${
-                        drawingMode === "ui-element"
+                      className={`px-4 py-2 text-sm text-white rounded-md transition-colors ${drawingMode === "ui-element"
                           ? "bg-green-600 hover:bg-green-700 disabled:bg-green-300"
                           : "bg-red-600 hover:bg-red-700 disabled:bg-red-300"
-                      }`}
+                        }`}
                     >
                       Save
                     </button>

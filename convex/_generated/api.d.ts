@@ -14,6 +14,7 @@ import type * as boundingBoxOverlay from "../boundingBoxOverlay.js";
 import type * as boundingBoxQueries from "../boundingBoxQueries.js";
 import type * as boundingBoxes from "../boundingBoxes.js";
 import type * as debug_db from "../debug_db.js";
+import type * as documents from "../documents.js";
 import type * as exportPdd from "../exportPdd.js";
 import type * as flows from "../flows.js";
 import type * as geminiApi from "../geminiApi.js";
@@ -47,6 +48,7 @@ declare const fullApi: ApiFromModules<{
   boundingBoxQueries: typeof boundingBoxQueries;
   boundingBoxes: typeof boundingBoxes;
   debug_db: typeof debug_db;
+  documents: typeof documents;
   exportPdd: typeof exportPdd;
   flows: typeof flows;
   geminiApi: typeof geminiApi;

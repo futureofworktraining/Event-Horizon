@@ -34,8 +34,8 @@ function NavItem({ href, icon, label, isActive, isCollapsed, badge }: NavItemPro
       className={cn(
         "flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-all duration-200",
         isActive
-          ? "bg-primary text-primary-foreground shadow-sm"
-          : "text-muted-foreground hover:text-foreground hover:bg-muted",
+          ? "bg-background text-foreground border-2 border-foreground shadow-[2px_2px_0px_0px_var(--foreground)] font-bold"
+          : "text-muted-foreground hover:text-foreground hover:bg-muted font-medium hover:translate-x-1 transition-transform",
         isCollapsed && "justify-center px-2"
       )}
       title={isCollapsed ? label : undefined}
@@ -98,18 +98,18 @@ export function Sidebar() {
   return (
     <aside
       className={cn(
-        "h-full bg-card flex flex-col transition-all duration-300 ease-in-out",
+        "h-screen sticky top-0 bg-sidebar flex flex-col transition-all duration-300 ease-in-out border-r border-sidebar-border",
         isCollapsed ? "w-16" : "w-64"
       )}
     >
       {/* Logo Section */}
-      <div className={cn("border-b border-border/50", isCollapsed ? "p-3" : "p-6")}>
+      <div className={cn("border-b border-border/50 flex flex-shrink-0 items-center justify-start", isCollapsed ? "h-14 p-3" : "h-14 px-6")}>
         <Link href="/" className="flex items-center gap-3">
           <div className={cn(
-            "rounded-xl bg-gradient-to-br from-violet-600 to-indigo-600 flex items-center justify-center shadow-lg shadow-violet-500/25 flex-shrink-0",
+            "rounded-xl bg-primary flex items-center justify-center border-2 border-foreground shadow-[4px_4px_0px_0px_rgba(0,0,0,1)] flex-shrink-0",
             isCollapsed ? "w-10 h-10" : "w-10 h-10"
           )}>
-            <Layers className="w-5 h-5 text-white" />
+            <Layers className="w-5 h-5 text-primary-foreground" />
           </div>
           {!isCollapsed && (
             <div className="flex flex-col overflow-hidden">

@@ -4,35 +4,10 @@ import { useQuery } from "convex/react";
 import { api } from "../../../convex/_generated/api";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { FolderOpen, FileText, Clock, CheckCircle2, ArrowRight, Loader2, AlertCircle, Plus } from "lucide-react";
+import { FolderOpen, Clock, CheckCircle2, Plus } from "lucide-react";
 import Link from "next/link";
 import { useSearchParams } from "next/navigation";
-
-function formatDate(timestamp: number): string {
-  return new Date(timestamp).toLocaleString("en-US", {
-    month: "short",
-    day: "numeric",
-    year: "numeric",
-  });
-}
-
-function StatusBadge({ status }: { status: string }) {
-  const config = {
-    pending: { icon: Clock, label: "Pending", className: "text-amber-600 bg-amber-50" },
-    processing: { icon: Loader2, label: "Processing", className: "text-blue-600 bg-blue-50" },
-    completed: { icon: CheckCircle2, label: "Completed", className: "text-emerald-600 bg-emerald-50" },
-    failed: { icon: AlertCircle, label: "Failed", className: "text-red-600 bg-red-50" },
-  }[status] || { icon: Clock, label: status, className: "text-gray-600 bg-gray-50" };
-
-  const Icon = config.icon;
-
-  return (
-    <span className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-medium ${config.className}`}>
-      <Icon className={`w-3 h-3 ${status === "processing" ? "animate-spin" : ""}`} />
-      {config.label}
-    </span>
-  );
-}
+import { ProjectCard } from "./ProjectCard";
 
 export default function ProjectsPage() {
   const searchParams = useSearchParams();
@@ -140,48 +115,12 @@ export default function ProjectsPage() {
               {allJobs.map(job => {
                 const isCompleted = job.status === "completed" && job.processId;
 
-                const content = (
-                  <div className="flex items-start gap-3">
-                    <div className="w-10 h-10 rounded-lg bg-gradient-to-br from-violet-500/10 to-indigo-500/10 flex items-center justify-center flex-shrink-0">
-                      <FileText className="w-5 h-5 text-violet-600" />
-                    </div>
-                    <div className="flex-1 min-w-0">
-                      <p className={`font-medium truncate transition-colors ${isCompleted ? "group-hover:text-violet-600" : ""
-                        }`}>
-                        {job.fileName}
-                      </p>
-                      <div className="flex items-center gap-2 mt-1">
-                        <p className="text-sm text-muted-foreground">
-                          {formatDate(job.createdAt)}
-                        </p>
-                        <StatusBadge status={job.status} />
-                      </div>
-                    </div>
-                    {isCompleted && (
-                      <ArrowRight className="w-4 h-4 text-muted-foreground opacity-0 group-hover:opacity-100 transition-opacity" />
-                    )}
-                  </div>
-                );
-
-                if (isCompleted) {
-                  return (
-                    <Link
-                      key={job._id}
-                      href={`/process/${job.processId}`}
-                      className="group p-4 rounded-lg border bg-card transition-all hover:bg-muted/30 hover:border-violet-200 cursor-pointer"
-                    >
-                      {content}
-                    </Link>
-                  );
-                }
-
                 return (
-                  <div
+                  <ProjectCard
                     key={job._id}
-                    className="p-4 rounded-lg border bg-card opacity-80"
-                  >
-                    {content}
-                  </div>
+                    job={job}
+                    isCompleted={!!isCompleted}
+                  />
                 );
               })}
             </div>

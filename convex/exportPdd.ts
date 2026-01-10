@@ -55,10 +55,16 @@ interface StepImages {
 
 async function fetchImageAsBuffer(url: string): Promise<Buffer | null> {
   try {
+    console.log(`Fetching image from: ${url}`);
     const response = await fetch(url);
-    if (!response.ok) return null;
-    return Buffer.from(await response.arrayBuffer());
-  } catch {
+    if (!response.ok) {
+      console.error(`Failed to fetch image: ${response.status} ${response.statusText}`);
+      return null;
+    }
+    const arrayBuffer = await response.arrayBuffer();
+    return Buffer.from(arrayBuffer);
+  } catch (error) {
+    console.error(`Error fetching image from ${url}:`, error);
     return null;
   }
 }
@@ -1073,7 +1079,7 @@ async function createPdfDocument(processData: any): Promise<Buffer> {
           : `Step ${step.stepNumber}`;
 
         doc.fontSize(14).fillColor("#2563eb").text(`${stepLabel}: `, { continued: true })
-           .fillColor("#1e293b").text(step.description || "No description");
+          .fillColor("#1e293b").text(step.description || "No description");
         doc.moveDown(0.3);
 
         // Step details
@@ -1191,8 +1197,18 @@ export const generateWordPDD = action({
         ? `${args.customFileName}.docx`
         : `${processData.processName.replace(/\s+/g, "_").toLowerCase()}_pdd.docx`;
 
+      // Store document reference
+      await ctx.runMutation(internal.documents.storeDocument, {
+        processId: args.processId,
+        storageId: storageId,
+        name: fileName,
+        format: "docx",
+        size: docBuffer.length,
+      });
+
       return { success: true, storageId, downloadUrl: downloadUrl || undefined, fileName };
     } catch (error) {
+      console.error("Error generating Word PDD:", error);
       return { success: false, error: error instanceof Error ? error.message : "Unknown error" };
     }
   },
@@ -1238,8 +1254,18 @@ export const generatePdfPDD = action({
         ? `${args.customFileName}.pdf`
         : `${processData.processName.replace(/\s+/g, "_").toLowerCase()}_pdd.pdf`;
 
+      // Store document reference
+      await ctx.runMutation(internal.documents.storeDocument, {
+        processId: args.processId,
+        storageId: storageId,
+        name: fileName,
+        format: "pdf",
+        size: pdfBuffer.length,
+      });
+
       return { success: true, storageId, downloadUrl: downloadUrl || undefined, fileName };
     } catch (error) {
+      console.error("Error generating PDF PDD:", error);
       return { success: false, error: error instanceof Error ? error.message : "Unknown error" };
     }
   },

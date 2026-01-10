@@ -323,6 +323,51 @@ export const getAllStepsNeedingBoundingBoxes = query({
   },
 });
 
+// Get all steps needing sensitive info detection across all processes in a job
+export const getAllStepsNeedingSensitiveInfo = query({
+  args: { jobId: v.id("jobs") },
+  handler: async (ctx, args) => {
+    const allProcesses = await ctx.db
+      .query("processes")
+      .withIndex("by_job", (q) => q.eq("jobId", args.jobId))
+      .collect();
+
+    const allSteps: Array<{
+      stepId: string;
+      processId: string;
+      processName: string;
+      stepNumber: number;
+      customPrompt?: string;
+    }> = [];
+
+    const job = await ctx.db.get(args.jobId);
+
+    for (const process of allProcesses) {
+      const steps = await ctx.db
+        .query("steps")
+        .withIndex("by_process", (q) => q.eq("processId", process._id))
+        .collect();
+
+      // Only steps with screenshots and NOT YET detected sensitive info
+      const stepsNeedingSensitiveInfo = steps
+        .filter((s) => s.screenshotStorageId && !s.sensitiveInfoDetected)
+        .sort((a, b) => a.stepNumber - b.stepNumber);
+
+      for (const step of stepsNeedingSensitiveInfo) {
+        allSteps.push({
+          stepId: step._id,
+          processId: process._id,
+          processName: process.processName,
+          stepNumber: step.stepNumber,
+          customPrompt: job?.sensitiveInfoPrompt ?? process.sensitiveInfoPrompt,
+        });
+      }
+    }
+
+    return allSteps;
+  },
+});
+
 // Get processing status for all processes in a job (for orchestrator)
 export const getJobProcessingStatus = query({
   args: { jobId: v.id("jobs") },
@@ -358,6 +403,15 @@ export const getJobProcessingStatus = query({
           (s) => s.boundingBoxDetected
         ).length;
 
+        // Steps that have a screenshot but haven't been checked for sensitive info yet
+        const stepsNeedingSensitiveInfo = steps.filter(
+          (s) => s.screenshotStorageId && !s.sensitiveInfoDetected
+        ).length;
+
+        const stepsWithSensitiveInfo = steps.filter(
+          (s) => s.sensitiveInfoDetected
+        ).length;
+
         return {
           processId: process._id,
           processName: process.processName,
@@ -367,6 +421,8 @@ export const getJobProcessingStatus = query({
           stepsWithScreenshots,
           stepsNeedingBoundingBoxes,
           stepsWithBoundingBoxes,
+          stepsNeedingSensitiveInfo,
+          stepsWithSensitiveInfo,
         };
       })
     );
@@ -386,6 +442,8 @@ export const getJobProcessingStatus = query({
         totalScreenshotsComplete: processStatuses.reduce((sum, p) => sum + p.stepsWithScreenshots, 0),
         totalBoundingBoxesNeeded: processStatuses.reduce((sum, p) => sum + p.stepsNeedingBoundingBoxes, 0),
         totalBoundingBoxesComplete: processStatuses.reduce((sum, p) => sum + p.stepsWithBoundingBoxes, 0),
+        totalSensitiveInfoNeeded: processStatuses.reduce((sum, p) => sum + p.stepsNeedingSensitiveInfo, 0),
+        totalSensitiveInfoComplete: processStatuses.reduce((sum, p) => sum + p.stepsWithSensitiveInfo, 0),
       },
     };
   },

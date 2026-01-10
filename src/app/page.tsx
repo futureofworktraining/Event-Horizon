@@ -1,7 +1,8 @@
 "use client";
 
 import Link from "next/link";
-import { useQuery } from "convex/react";
+import { useQuery, useMutation } from "convex/react";
+import { useState } from "react";
 import { api } from "../../convex/_generated/api";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -17,6 +18,7 @@ import {
   TrendingUp,
   Activity,
   Layers,
+  Trash2,
 } from "lucide-react";
 
 function formatDate(timestamp: number): string {
@@ -30,11 +32,11 @@ function formatDate(timestamp: number): string {
 
 function StatusBadge({ status }: { status: string }) {
   const config = {
-    pending: { icon: Clock, label: "Pending", className: "text-amber-600 bg-amber-50" },
-    processing: { icon: Loader2, label: "Processing", className: "text-blue-600 bg-blue-50" },
-    completed: { icon: CheckCircle2, label: "Completed", className: "text-emerald-600 bg-emerald-50" },
-    failed: { icon: AlertCircle, label: "Failed", className: "text-red-600 bg-red-50" },
-  }[status] || { icon: Clock, label: status, className: "text-gray-600 bg-gray-50" };
+    pending: { icon: Clock, label: "Pending", className: "bg-chart-1 text-black border-2 border-black font-bold" },
+    processing: { icon: Loader2, label: "Processing", className: "bg-chart-5 text-white border-2 border-black font-bold" },
+    completed: { icon: CheckCircle2, label: "Completed", className: "bg-chart-2 text-black border-2 border-black font-bold" },
+    failed: { icon: AlertCircle, label: "Failed", className: "bg-destructive text-white border-2 border-black font-bold" },
+  }[status] || { icon: Clock, label: status, className: "bg-muted text-foreground border-2 border-black font-bold" };
 
   const Icon = config.icon;
 
@@ -81,8 +83,8 @@ export default function Home() {
                 <p className="text-sm font-medium text-muted-foreground">Total Analyses</p>
                 <p className="text-3xl font-bold">{stats.total}</p>
               </div>
-              <div className="w-12 h-12 rounded-xl bg-violet-100 flex items-center justify-center">
-                <Layers className="w-6 h-6 text-violet-600" />
+              <div className="w-12 h-12 rounded-lg bg-primary flex items-center justify-center shadow-hard-sm border-2 border-black">
+                <Layers className="w-6 h-6 text-primary-foreground" />
               </div>
             </div>
           </CardContent>
@@ -95,8 +97,8 @@ export default function Home() {
                 <p className="text-sm font-medium text-muted-foreground">Completed</p>
                 <p className="text-3xl font-bold text-emerald-600">{stats.completed}</p>
               </div>
-              <div className="w-12 h-12 rounded-xl bg-emerald-100 flex items-center justify-center">
-                <CheckCircle2 className="w-6 h-6 text-emerald-600" />
+              <div className="w-12 h-12 rounded-lg bg-chart-2 flex items-center justify-center shadow-hard-sm border-2 border-black">
+                <CheckCircle2 className="w-6 h-6 text-black" />
               </div>
             </div>
           </CardContent>
@@ -109,8 +111,8 @@ export default function Home() {
                 <p className="text-sm font-medium text-muted-foreground">Processing</p>
                 <p className="text-3xl font-bold text-blue-600">{stats.processing}</p>
               </div>
-              <div className="w-12 h-12 rounded-xl bg-blue-100 flex items-center justify-center">
-                <Activity className="w-6 h-6 text-blue-600" />
+              <div className="w-12 h-12 rounded-lg bg-chart-5 flex items-center justify-center shadow-hard-sm border-2 border-black">
+                <Activity className="w-6 h-6 text-white" />
               </div>
             </div>
           </CardContent>
@@ -123,8 +125,8 @@ export default function Home() {
                 <p className="text-sm font-medium text-muted-foreground">Pending</p>
                 <p className="text-3xl font-bold text-amber-600">{stats.pending}</p>
               </div>
-              <div className="w-12 h-12 rounded-xl bg-amber-100 flex items-center justify-center">
-                <Clock className="w-6 h-6 text-amber-600" />
+              <div className="w-12 h-12 rounded-lg bg-chart-1 flex items-center justify-center shadow-hard-sm border-2 border-black">
+                <Clock className="w-6 h-6 text-black" />
               </div>
             </div>
           </CardContent>
@@ -136,7 +138,7 @@ export default function Home() {
         {/* Recent Activity */}
         <div className="lg:col-span-2">
           <Card>
-            <CardHeader className="flex flex-row items-center justify-between">
+            <CardHeader className="flex flex-row items-center justify-between border-b border-zinc-200 dark:border-zinc-800">
               <div>
                 <CardTitle>Recent Activity</CardTitle>
                 <CardDescription>Your latest video analysis jobs</CardDescription>
@@ -177,26 +179,7 @@ export default function Home() {
               ) : (
                 <div className="space-y-3">
                   {jobs.map(job => (
-                    <div
-                      key={job._id}
-                      className="flex items-center gap-4 p-4 rounded-lg border bg-card hover:bg-muted/30 transition-colors"
-                    >
-                      <div className="w-10 h-10 rounded-lg bg-gradient-to-br from-violet-500/10 to-indigo-500/10 flex items-center justify-center">
-                        <FileText className="w-5 h-5 text-violet-600" />
-                      </div>
-                      <div className="flex-1 min-w-0">
-                        <p className="font-medium truncate">{job.fileName}</p>
-                        <p className="text-sm text-muted-foreground">{formatDate(job.createdAt)}</p>
-                      </div>
-                      <StatusBadge status={job.status} />
-                      {job.status === "completed" && job.processId && (
-                        <Link href={`/process/${job.processId}`}>
-                          <Button variant="ghost" size="sm">
-                            View
-                          </Button>
-                        </Link>
-                      )}
-                    </div>
+                    <RecentActivityItem key={job._id} job={job} />
                   ))}
                 </div>
               )}
@@ -218,7 +201,7 @@ export default function Home() {
                   Upload New Video
                 </Button>
               </Link>
-              <Link href="/upload" className="block">
+              <Link href="/projects" className="block">
                 <Button className="w-full justify-start gap-3 h-12" variant="outline">
                   <FileText className="w-5 h-5" />
                   Browse Projects
@@ -231,15 +214,15 @@ export default function Home() {
           <Card>
             <CardHeader>
               <CardTitle className="flex items-center gap-2">
-                <TrendingUp className="w-5 h-5 text-violet-600" />
+                <TrendingUp className="w-5 h-5 text-primary" />
                 How It Works
               </CardTitle>
             </CardHeader>
             <CardContent>
               <div className="space-y-4">
                 <div className="flex gap-3">
-                  <div className="w-8 h-8 rounded-full bg-violet-100 flex items-center justify-center flex-shrink-0">
-                    <span className="text-sm font-bold text-violet-600">1</span>
+                  <div className="w-8 h-8 rounded-lg bg-primary flex items-center justify-center flex-shrink-0 border-2 border-black shadow-hard-sm">
+                    <span className="text-sm font-bold text-primary-foreground">1</span>
                   </div>
                   <div>
                     <p className="font-medium text-sm">Upload Video</p>
@@ -247,8 +230,8 @@ export default function Home() {
                   </div>
                 </div>
                 <div className="flex gap-3">
-                  <div className="w-8 h-8 rounded-full bg-violet-100 flex items-center justify-center flex-shrink-0">
-                    <span className="text-sm font-bold text-violet-600">2</span>
+                  <div className="w-8 h-8 rounded-lg bg-primary flex items-center justify-center flex-shrink-0 border-2 border-black shadow-hard-sm">
+                    <span className="text-sm font-bold text-primary-foreground">2</span>
                   </div>
                   <div>
                     <p className="font-medium text-sm">AI Analysis</p>
@@ -256,8 +239,8 @@ export default function Home() {
                   </div>
                 </div>
                 <div className="flex gap-3">
-                  <div className="w-8 h-8 rounded-full bg-violet-100 flex items-center justify-center flex-shrink-0">
-                    <span className="text-sm font-bold text-violet-600">3</span>
+                  <div className="w-8 h-8 rounded-lg bg-primary flex items-center justify-center flex-shrink-0 border-2 border-black shadow-hard-sm">
+                    <span className="text-sm font-bold text-primary-foreground">3</span>
                   </div>
                   <div>
                     <p className="font-medium text-sm">Export PDD</p>
@@ -269,6 +252,62 @@ export default function Home() {
           </Card>
         </div>
       </div>
+    </div>
+  );
+}
+
+function RecentActivityItem({ job }: { job: any }) {
+  const deleteJob = useMutation(api.jobs.deleteJob);
+  const [isDeleting, setIsDeleting] = useState(false);
+
+  const handleDelete = async () => {
+    if (!confirm("Are you sure you want to delete this project? This action cannot be undone.")) {
+      return;
+    }
+
+    try {
+      setIsDeleting(true);
+      await deleteJob({ jobId: job._id });
+    } catch (error) {
+      console.error("Failed to delete job:", error);
+      alert("Failed to delete project");
+    } finally {
+      setIsDeleting(false);
+    }
+  };
+
+  return (
+    <div
+      className="flex items-center gap-4 p-4 rounded-lg border bg-card hover:bg-muted/30 transition-colors"
+    >
+      <div className="w-10 h-10 rounded-lg bg-background border-2 border-black shadow-hard-sm flex items-center justify-center">
+        <FileText className="w-5 h-5 text-primary" />
+      </div>
+      <div className="flex-1 min-w-0">
+        <p className="font-medium truncate">{job.fileName}</p>
+        <p className="text-sm text-muted-foreground">{formatDate(job.createdAt)}</p>
+      </div>
+      <StatusBadge status={job.status} />
+      {job.status === "completed" && job.processId && (
+        <Link href={`/process/${job.processId}`}>
+          <Button variant="ghost" size="sm">
+            View
+          </Button>
+        </Link>
+      )}
+      <Button
+        variant="ghost"
+        size="icon"
+        className="h-8 w-8 text-muted-foreground hover:text-red-600 hover:bg-red-50"
+        onClick={handleDelete}
+        disabled={isDeleting}
+      >
+        {isDeleting ? (
+          <Loader2 className="w-4 h-4 animate-spin" />
+        ) : (
+          <Trash2 className="w-4 h-4" />
+        )}
+      </Button>
     </div>
   );
 }

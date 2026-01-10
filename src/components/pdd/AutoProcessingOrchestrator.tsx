@@ -5,14 +5,15 @@ import { useQuery, useMutation, useAction } from "convex/react";
 import { api } from "../../../convex/_generated/api";
 import { Id } from "../../../convex/_generated/dataModel";
 import { extractSingleFrame } from "@/lib/videoFrameExtractor";
-import { Camera, Target, Loader2, CheckCircle2, ChevronDown, ChevronUp, AlertCircle } from "lucide-react";
+import { Camera, Target, Loader2, CheckCircle2, ChevronDown, ChevronUp, AlertCircle, ShieldAlert } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { toast } from "sonner";
 
 interface AutoProcessingOrchestratorProps {
   jobId: Id<"jobs">;
 }
 
-type ProcessingPhase = "idle" | "screenshots" | "bounding_boxes" | "complete" | "error";
+type ProcessingPhase = "idle" | "screenshots" | "bounding_boxes" | "sensitive_info" | "complete" | "error";
 
 interface ProcessingState {
   phase: ProcessingPhase;
@@ -23,6 +24,8 @@ interface ProcessingState {
   totalScreenshots: number;
   processedBoundingBoxes: number;
   totalBoundingBoxes: number;
+  processedSensitiveInfo: number;
+  totalSensitiveInfo: number;
   // Errors (keep last 3)
   errors: string[];
 }
@@ -36,6 +39,8 @@ export function AutoProcessingOrchestrator({ jobId }: AutoProcessingOrchestrator
     totalScreenshots: 0,
     processedBoundingBoxes: 0,
     totalBoundingBoxes: 0,
+    processedSensitiveInfo: 0,
+    totalSensitiveInfo: 0,
     errors: [],
   });
   const [isMinimized, setIsMinimized] = useState(false);
@@ -47,6 +52,7 @@ export function AutoProcessingOrchestrator({ jobId }: AutoProcessingOrchestrator
   const processingStatus = useQuery(api.jobs.getJobProcessingStatus, { jobId });
   const stepsNeedingScreenshots = useQuery(api.jobs.getAllStepsNeedingScreenshots, { jobId });
   const stepsNeedingBoundingBoxes = useQuery(api.jobs.getAllStepsNeedingBoundingBoxes, { jobId });
+  const stepsNeedingSensitiveInfo = useQuery(api.jobs.getAllStepsNeedingSensitiveInfo, { jobId });
   const videoUrl = useQuery(
     api.jobs.getVideoUrl,
     processingStatus?.job?.videoStorageId
@@ -54,10 +60,29 @@ export function AutoProcessingOrchestrator({ jobId }: AutoProcessingOrchestrator
       : "skip"
   );
 
+  // Refs to hold latest data for async functions
+  const stepsNeedingScreenshotsRef = useRef(stepsNeedingScreenshots);
+  const stepsNeedingBoundingBoxesRef = useRef(stepsNeedingBoundingBoxes);
+  const stepsNeedingSensitiveInfoRef = useRef(stepsNeedingSensitiveInfo);
+
+  // Keep refs updated
+  useEffect(() => {
+    stepsNeedingScreenshotsRef.current = stepsNeedingScreenshots;
+  }, [stepsNeedingScreenshots]);
+
+  useEffect(() => {
+    stepsNeedingBoundingBoxesRef.current = stepsNeedingBoundingBoxes;
+  }, [stepsNeedingBoundingBoxes]);
+
+  useEffect(() => {
+    stepsNeedingSensitiveInfoRef.current = stepsNeedingSensitiveInfo;
+  }, [stepsNeedingSensitiveInfo]);
+
   // Mutations and actions
   const generateUploadUrl = useMutation(api.jobs.generateUploadUrl);
   const updateStepScreenshot = useMutation(api.jobs.updateStepScreenshot);
   const detectSingleBoundingBox = useAction(api.boundingBoxes.detectSingleBoundingBox);
+  const detectSensitiveBoxesSingleStep = useAction(api.sensitiveInfoDetection.detectSensitiveBoxesSingleStep);
 
   // Add error helper
   const addError = useCallback((error: string) => {
@@ -69,19 +94,21 @@ export function AutoProcessingOrchestrator({ jobId }: AutoProcessingOrchestrator
 
   // Process screenshots step by step
   const processScreenshots = useCallback(async () => {
-    if (!stepsNeedingScreenshots || stepsNeedingScreenshots.length === 0 || !videoUrl) {
+    const freshSteps = stepsNeedingScreenshotsRef.current;
+
+    if (!freshSteps || freshSteps.length === 0 || !videoUrl) {
       return true; // No work to do, success
     }
 
     setState(prev => ({
       ...prev,
       phase: "screenshots",
-      totalScreenshots: stepsNeedingScreenshots.length,
+      totalScreenshots: freshSteps.length,
       processedScreenshots: 0,
     }));
 
-    for (let i = 0; i < stepsNeedingScreenshots.length; i++) {
-      const step = stepsNeedingScreenshots[i];
+    for (let i = 0; i < freshSteps.length; i++) {
+      const step = freshSteps[i];
 
       setState(prev => ({
         ...prev,
@@ -124,27 +151,29 @@ export function AutoProcessingOrchestrator({ jobId }: AutoProcessingOrchestrator
 
     setState(prev => ({
       ...prev,
-      processedScreenshots: stepsNeedingScreenshots.length,
+      processedScreenshots: freshSteps.length,
     }));
 
     return true;
-  }, [stepsNeedingScreenshots, videoUrl, generateUploadUrl, updateStepScreenshot, addError]);
+  }, [videoUrl, generateUploadUrl, updateStepScreenshot, addError]);
 
   // Process bounding boxes step by step
   const processBoundingBoxes = useCallback(async () => {
-    if (!stepsNeedingBoundingBoxes || stepsNeedingBoundingBoxes.length === 0) {
-      return true; // No work to do, success
+    const freshSteps = stepsNeedingBoundingBoxesRef.current;
+
+    if (!freshSteps || freshSteps.length === 0) {
+      return false; // No work to do
     }
 
     setState(prev => ({
       ...prev,
       phase: "bounding_boxes",
-      totalBoundingBoxes: stepsNeedingBoundingBoxes.length,
+      totalBoundingBoxes: freshSteps.length,
       processedBoundingBoxes: 0,
     }));
 
-    for (let i = 0; i < stepsNeedingBoundingBoxes.length; i++) {
-      const step = stepsNeedingBoundingBoxes[i];
+    for (let i = 0; i < freshSteps.length; i++) {
+      const step = freshSteps[i];
 
       setState(prev => ({
         ...prev,
@@ -165,17 +194,71 @@ export function AutoProcessingOrchestrator({ jobId }: AutoProcessingOrchestrator
         addError(`Bounding box error: ${step.processName} step ${step.stepNumber}`);
         console.error("Bounding box detection error:", error);
       }
-
-      // The action already has a delay built in
     }
 
     setState(prev => ({
       ...prev,
-      processedBoundingBoxes: stepsNeedingBoundingBoxes.length,
+      processedBoundingBoxes: freshSteps.length,
     }));
 
     return true;
-  }, [stepsNeedingBoundingBoxes, detectSingleBoundingBox, addError]);
+  }, [detectSingleBoundingBox, addError]);
+
+  // Process sensitive info step by step
+  const processSensitiveInfo = useCallback(async () => {
+    const freshSteps = stepsNeedingSensitiveInfoRef.current;
+
+    if (!freshSteps || freshSteps.length === 0) {
+      return true; // No work to do
+    }
+
+    setState(prev => ({
+      ...prev,
+      phase: "sensitive_info",
+      totalSensitiveInfo: freshSteps.length,
+      processedSensitiveInfo: 0,
+    }));
+
+    for (let i = 0; i < freshSteps.length; i++) {
+      const step = freshSteps[i];
+
+      // Skip if weird/empty prompt (should be handled by query but double check)
+      if (!step.customPrompt) {
+        // If no global prompt and no local prompt, we can't detect
+        continue;
+      }
+
+      setState(prev => ({
+        ...prev,
+        currentProcessName: step.processName,
+        currentStepNumber: step.stepNumber,
+        processedSensitiveInfo: i,
+      }));
+
+      try {
+        const result = await detectSensitiveBoxesSingleStep({
+          stepId: step.stepId as Id<"steps">,
+          customPrompt: step.customPrompt, // Use job default or process default
+        });
+
+        if (!result.success) {
+          addError(`Sensitive info error: ${step.processName} step ${step.stepNumber}`);
+        }
+      } catch (error) {
+        addError(`Sensitive info error: ${step.processName} step ${step.stepNumber}`);
+        console.error("Sensitive info detection error:", error);
+      }
+
+      // Action has delay built in
+    }
+
+    setState(prev => ({
+      ...prev,
+      processedSensitiveInfo: freshSteps.length,
+    }));
+
+    return true;
+  }, [detectSensitiveBoxesSingleStep, addError]);
 
   // Main processing function
   const runProcessing = useCallback(async () => {
@@ -189,11 +272,26 @@ export function AutoProcessingOrchestrator({ jobId }: AutoProcessingOrchestrator
       }
 
       // Small delay before bounding boxes (let queries refresh)
-      await new Promise(resolve => setTimeout(resolve, 1000));
+      // This is crucial: wait for the database changes from screenshots 
+      // to propagate to the getStepsNeedingBoundingBoxes query
+      await new Promise(resolve => setTimeout(resolve, 2000));
 
       // Phase 2: Bounding boxes
       if (processingStatus?.job.autoBoundingBoxes) {
-        await processBoundingBoxes();
+        const didWork = await processBoundingBoxes();
+        if (didWork) {
+          toast.success("All bounding boxes generated", {
+            description: "UI element detection completed for all steps.",
+          });
+        }
+      }
+
+      // Small delay
+      await new Promise(resolve => setTimeout(resolve, 2000));
+
+      // Phase 3: Sensitive Info
+      if (processingStatus?.job.autoSensitiveInfo) {
+        await processSensitiveInfo();
       }
 
       setState(prev => ({
@@ -209,7 +307,7 @@ export function AutoProcessingOrchestrator({ jobId }: AutoProcessingOrchestrator
     } finally {
       processingRef.current = false;
     }
-  }, [processingStatus, processScreenshots, processBoundingBoxes]);
+  }, [processingStatus, processScreenshots, processBoundingBoxes, processSensitiveInfo]);
 
   // Auto-start when data is ready
   useEffect(() => {
@@ -218,7 +316,8 @@ export function AutoProcessingOrchestrator({ jobId }: AutoProcessingOrchestrator
 
     const shouldProcess =
       (processingStatus.job.autoExtractScreenshots && processingStatus.totals.totalScreenshotsNeeded > 0) ||
-      (processingStatus.job.autoBoundingBoxes && processingStatus.totals.totalBoundingBoxesNeeded > 0);
+      (processingStatus.job.autoBoundingBoxes && processingStatus.totals.totalBoundingBoxesNeeded > 0) ||
+      (processingStatus.job.autoSensitiveInfo && processingStatus.totals.totalSensitiveInfoNeeded > 0);
 
     if (shouldProcess) {
       hasStartedRef.current = true;
@@ -237,8 +336,8 @@ export function AutoProcessingOrchestrator({ jobId }: AutoProcessingOrchestrator
     setTimeout(() => setIsDismissed(true), 3000);
   }
 
-  const totalWork = state.totalScreenshots + state.totalBoundingBoxes;
-  const completedWork = state.processedScreenshots + state.processedBoundingBoxes;
+  const totalWork = state.totalScreenshots + state.totalBoundingBoxes + state.totalSensitiveInfo;
+  const completedWork = state.processedScreenshots + state.processedBoundingBoxes + state.processedSensitiveInfo;
   const progress = totalWork > 0 ? (completedWork / totalWork) * 100 : 0;
 
   return (
@@ -265,6 +364,12 @@ export function AutoProcessingOrchestrator({ jobId }: AutoProcessingOrchestrator
               <>
                 <Target className="w-4 h-4 text-blue-600" />
                 <span className="text-sm font-medium">Detecting UI Elements</span>
+              </>
+            )}
+            {state.phase === "sensitive_info" && (
+              <>
+                <ShieldAlert className="w-4 h-4 text-purple-600" />
+                <span className="text-sm font-medium">Scanning Sensitive Info</span>
               </>
             )}
             {state.phase === "complete" && (
@@ -328,6 +433,11 @@ export function AutoProcessingOrchestrator({ jobId }: AutoProcessingOrchestrator
                       Boxes: {state.processedBoundingBoxes} / {state.totalBoundingBoxes}
                     </>
                   )}
+                  {state.phase === "sensitive_info" && (
+                    <>
+                      Info: {state.processedSensitiveInfo} / {state.totalSensitiveInfo}
+                    </>
+                  )}
                   {state.phase === "complete" && (
                     <>
                       {state.processedScreenshots > 0 && `${state.processedScreenshots} screenshots`}
@@ -344,6 +454,7 @@ export function AutoProcessingOrchestrator({ jobId }: AutoProcessingOrchestrator
                     "h-full transition-all duration-300",
                     state.phase === "screenshots" && "bg-amber-500",
                     state.phase === "bounding_boxes" && "bg-blue-500",
+                    state.phase === "sensitive_info" && "bg-purple-500",
                     state.phase === "complete" && "bg-green-500",
                     state.phase === "error" && "bg-red-500"
                   )}

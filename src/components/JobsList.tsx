@@ -375,6 +375,12 @@ export function JobsList() {
 
   return (
     <>
+      <div className="flex items-center gap-4 px-4 py-2 border-b bg-muted/20 text-[10px] uppercase tracking-widest font-black text-muted-foreground">
+        <div className="w-6 flex-shrink-0" /> {/* Icon spacer */}
+        <div className="flex-1">File Details</div>
+        <div className="w-32 text-center">Status</div>
+        <div className="w-[150px] text-right pr-2">Actions</div>
+      </div>
       <div>
         {jobs.map((job) => (
           <JobRow

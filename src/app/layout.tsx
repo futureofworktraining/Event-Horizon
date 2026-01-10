@@ -1,5 +1,5 @@
 import type { Metadata } from "next";
-import { Geist, Geist_Mono } from "next/font/google";
+import { Geist, Geist_Mono, Plus_Jakarta_Sans } from "next/font/google";
 import "./globals.css";
 import { ConvexClientProvider } from "./ConvexClientProvider";
 import { SidebarProvider } from "@/components/SidebarContext";
@@ -17,6 +17,12 @@ const geistMono = Geist_Mono({
   subsets: ["latin"],
 });
 
+const plusJakarta = Plus_Jakarta_Sans({
+  variable: "--font-plus-jakarta",
+  subsets: ["latin"],
+  weight: ["400", "500", "600", "700", "800"],
+});
+
 export const metadata: Metadata = {
   title: "Event Horizon AI - Process Documentation Studio",
   description: "Transform screen recordings into detailed Process Design Documents using AI",
@@ -30,18 +36,18 @@ export default function RootLayout({
   return (
     <html lang="en" suppressHydrationWarning>
       <body
-        className={`${geistSans.variable} ${geistMono.variable} antialiased`}
+        className={`${geistSans.variable} ${geistMono.variable} ${plusJakarta.variable} font-sans antialiased`}
       >
         <ConvexClientProvider>
           <SidebarProvider>
-            <div className="min-h-screen flex">
+            <div className="min-h-screen flex items-stretch">
               {/* Sidebar */}
               <Sidebar />
 
               {/* Main content area */}
-              <div className="flex-1 flex flex-col min-h-screen border-l border-border/50">
+              <div className="flex-1 flex flex-col min-h-screen">
                 <Header />
-                <main className="flex-1 bg-muted/30 overflow-auto">{children}</main>
+                <main className="flex-1 bg-dot-pattern overflow-auto">{children}</main>
               </div>
             </div>
           </SidebarProvider>

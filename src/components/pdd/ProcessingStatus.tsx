@@ -72,21 +72,21 @@ export function ProcessingStatus({ status, progress, errorMessage }: ProcessingS
             </p>
           </div>
 
-          {progress !== undefined && progress > 0 && (
+          {progress !== undefined && progress >= 0 && (
             <div className="w-full max-w-md space-y-2">
               <Progress value={progress} className="h-2" />
               <p className="text-sm text-center text-muted-foreground">
                 {progress}% complete
               </p>
               <p className="text-xs text-center text-muted-foreground">
-                {progress <= 10 && "Pobieranie wideo..."}
-                {progress > 10 && progress <= 20 && "Wideo pobrane, przygotowywanie..."}
-                {progress > 20 && progress <= 35 && "Wysyłanie wideo do Gemini..."}
-                {progress > 35 && progress <= 45 && "Przetwarzanie wideo w Gemini..."}
-                {progress > 45 && progress <= 60 && "AI analizuje nagranie ekranu (to może potrwać kilka minut)..."}
-                {progress > 60 && progress <= 65 && "Parsowanie odpowiedzi AI..."}
-                {progress > 65 && progress <= 90 && "Tworzenie procesów i kroków..."}
-                {progress > 90 && progress < 100 && "Finalizowanie..."}
+                {progress <= 10 && "Downloading video..."}
+                {progress > 10 && progress <= 20 && "Video downloaded, preparing..."}
+                {progress > 20 && progress <= 35 && "Uploading video to Gemini..."}
+                {progress > 35 && progress <= 45 && "Processing video in Gemini..."}
+                {progress > 45 && progress <= 60 && "AI is analyzing screen recording (this may take a few minutes)..."}
+                {progress > 60 && progress <= 65 && "Parsing AI response..."}
+                {progress > 65 && progress <= 90 && "Creating processes and steps..."}
+                {progress > 90 && progress < 100 && "Finalizing..."}
               </p>
             </div>
           )}

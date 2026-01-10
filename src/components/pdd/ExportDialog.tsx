@@ -40,6 +40,7 @@ const formatExtensions: Record<ExportFormat, string> = {
 };
 
 function sanitizeFilename(name: string): string {
+  if (!name) return "process_pdd";
   return name
     .replace(/[<>:"/\\|?*]/g, "") // Remove invalid characters
     .replace(/\s+/g, "_")         // Replace spaces with underscores
@@ -95,38 +96,38 @@ export function ExportDialog({
             screenshot_required: step.screenshotRequired,
             ui_element: step.uiElement
               ? {
-                  element_name: step.uiElement.elementName,
-                  element_type: step.uiElement.elementType,
-                  location_description: step.uiElement.locationDescription,
-                  screen_region: step.uiElement.screenRegion,
-                  parent_element: step.uiElement.parentElement,
-                  identifiers: step.uiElement.identifiers
-                    ? {
-                        id: step.uiElement.identifiers.id,
-                        class_name: step.uiElement.identifiers.className,
-                        xpath: step.uiElement.identifiers.xpath,
-                        accessibility_id: step.uiElement.identifiers.accessibilityId,
-                      }
-                    : undefined,
-                }
+                element_name: step.uiElement.elementName,
+                element_type: step.uiElement.elementType,
+                location_description: step.uiElement.locationDescription,
+                screen_region: step.uiElement.screenRegion,
+                parent_element: step.uiElement.parentElement,
+                identifiers: step.uiElement.identifiers
+                  ? {
+                    id: step.uiElement.identifiers.id,
+                    class_name: step.uiElement.identifiers.className,
+                    xpath: step.uiElement.identifiers.xpath,
+                    accessibility_id: step.uiElement.identifiers.accessibilityId,
+                  }
+                  : undefined,
+              }
               : undefined,
             data_info: step.dataInfo
               ? {
-                  value: step.dataInfo.value,
-                  data_type: step.dataInfo.dataType,
-                  source: step.dataInfo.source,
-                  is_sensitive: step.dataInfo.isSensitive,
-                  format: step.dataInfo.format,
-                  validation_rules: step.dataInfo.validationRules,
-                }
+                value: step.dataInfo.value,
+                data_type: step.dataInfo.dataType,
+                source: step.dataInfo.source,
+                is_sensitive: step.dataInfo.isSensitive,
+                format: step.dataInfo.format,
+                validation_rules: step.dataInfo.validationRules,
+              }
               : undefined,
             wait_condition: step.waitCondition
               ? {
-                  wait_type: step.waitCondition.waitType,
-                  description: step.waitCondition.description,
-                  timeout_seconds: step.waitCondition.timeoutSeconds,
-                  retry_count: step.waitCondition.retryCount,
-                }
+                wait_type: step.waitCondition.waitType,
+                description: step.waitCondition.description,
+                timeout_seconds: step.waitCondition.timeoutSeconds,
+                retry_count: step.waitCondition.retryCount,
+              }
               : undefined,
             notes: step.notes,
             automation_hint: step.automationHint,
@@ -284,7 +285,7 @@ export function ExportDialog({
           )}
         </div>
 
-        <DialogFooter className="gap-2 sm:gap-0">
+        <DialogFooter className="gap-3">
           <Button variant="outline" onClick={onClose} disabled={isExporting}>
             Cancel
           </Button>

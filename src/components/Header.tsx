@@ -1,6 +1,14 @@
 "use client";
 
-import { Bell, Search, User, ChevronDown } from "lucide-react";
+import { Bell, Search, User, ChevronDown, Settings, LogOut } from "lucide-react";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuLabel,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { useRouter, usePathname, useSearchParams } from "next/navigation";
@@ -39,7 +47,7 @@ export function Header() {
   }, [searchParams]);
 
   return (
-    <header className="h-16 border-b bg-card/50 backdrop-blur-sm flex items-center justify-between px-6">
+    <header className="h-14 border-b-2 border-border bg-background flex items-center justify-between px-6 shrink-0">
       {/* Search */}
       <div className="flex-1 max-w-md">
         <div className="relative">
@@ -47,7 +55,7 @@ export function Header() {
           <Input
             type="search"
             placeholder="Search processes, documents..."
-            className="pl-10 bg-muted/50 border-0 focus-visible:ring-1 focus-visible:ring-primary/50"
+            className="pl-10 bg-background border-2 border-border focus-visible:ring-0 focus-visible:border-foreground focus-visible:shadow-[2px_2px_0px_0px_var(--foreground)] transition-all"
             value={query}
             onChange={(e) => setQuery(e.target.value)}
           />
@@ -62,17 +70,34 @@ export function Header() {
         {/* Notifications */}
         <Button variant="ghost" size="icon" className="relative">
           <Bell className="w-5 h-5" />
-          <span className="absolute top-1.5 right-1.5 w-2 h-2 bg-violet-500 rounded-full" />
+          <span className="absolute top-1.5 right-1.5 w-2 h-2 bg-chart-4 rounded-full border border-background" />
         </Button>
 
         {/* User menu */}
-        <Button variant="ghost" className="gap-2 pl-2 pr-3">
-          <div className="w-8 h-8 rounded-full bg-gradient-to-br from-violet-500 to-indigo-500 flex items-center justify-center">
-            <User className="w-4 h-4 text-white" />
-          </div>
-          <span className="text-sm font-medium">User</span>
-          <ChevronDown className="w-4 h-4 text-muted-foreground" />
-        </Button>
+        <DropdownMenu>
+          <DropdownMenuTrigger asChild>
+            <Button variant="ghost" className="gap-2 pl-2 pr-3">
+              <div className="w-8 h-8 rounded-full bg-chart-1 border-2 border-foreground flex items-center justify-center text-foreground font-bold">
+                <User className="w-4 h-4" />
+              </div>
+              <span className="text-sm font-medium">User</span>
+              <ChevronDown className="w-4 h-4 text-muted-foreground" />
+            </Button>
+          </DropdownMenuTrigger>
+          <DropdownMenuContent align="end" className="w-56">
+            <DropdownMenuLabel>My Account</DropdownMenuLabel>
+            <DropdownMenuSeparator />
+            <DropdownMenuItem onClick={() => router.push("/settings")}>
+              <Settings className="mr-2 w-4 h-4" />
+              Settings
+            </DropdownMenuItem>
+            <DropdownMenuSeparator />
+            <DropdownMenuItem className="text-red-600 focus:text-red-600">
+              <LogOut className="mr-2 w-4 h-4" />
+              Sign out
+            </DropdownMenuItem>
+          </DropdownMenuContent>
+        </DropdownMenu>
       </div>
     </header>
   );

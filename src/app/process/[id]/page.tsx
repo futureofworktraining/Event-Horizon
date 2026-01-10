@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useCallback, useEffect } from "react";
+import { useState, useCallback, useEffect, useRef } from "react";
 import { useQuery, useMutation } from "convex/react";
 import { api } from "../../../../convex/_generated/api";
 import { useParams, useRouter } from "next/navigation";
@@ -22,6 +22,7 @@ import {
 } from "@/components/flowchart";
 import Link from "next/link";
 import { Workflow, List, ChevronDown, ChevronUp, Settings2, RefreshCw, Target, ShieldAlert, FileText, Loader2 } from "lucide-react";
+import { toast } from "sonner";
 
 type ViewMode = "flowchart" | "list";
 
@@ -49,6 +50,9 @@ export default function ProcessPage() {
   // Re-analyze state
   const [isReanalyzing, setIsReanalyzing] = useState(false);
   const [reanalyzeError, setReanalyzeError] = useState<string | null>(null);
+
+  // Status tracking since last render
+  const prevJobStatus = useRef<string | null>(null);
 
   // Subprocess fix state
   const [isFixingSubprocess, setIsFixingSubprocess] = useState(false);
@@ -78,6 +82,39 @@ export default function ProcessPage() {
     api.flows.getProcessesForJob,
     process?.job?._id ? { jobId: process.job._id } : "skip"
   );
+
+  // Job status monitoring for notifications
+  // eslint-disable-next-line react-hooks/rules-of-hooks
+  // Job status monitoring for notifications
+  // eslint-disable-next-line react-hooks/rules-of-hooks
+  useEffect(() => {
+    if (!process?.job?.status) return;
+
+    const currentStatus = process.job.status;
+    const prev = prevJobStatus.current;
+
+    // Skip notifications on initial load
+    if (prev === null) {
+      prevJobStatus.current = currentStatus;
+      return;
+    }
+
+    // "Process being analyzed" notification
+    if (currentStatus === "processing" && prev !== "processing") {
+      toast.info("Process is being analyzed", {
+        description: "Gemini is analyzing the video content...",
+      });
+    }
+
+    // "PDD generated" notification
+    if (currentStatus === "completed" && prev !== "completed") {
+      toast.success("PDD generated", {
+        description: "Process Design Document has been successfully generated.",
+      });
+    }
+
+    prevJobStatus.current = currentStatus;
+  }, [process?.job?.status]);
 
   // Handlers
   const handleStepClick = useCallback((stepNumber: number) => {
@@ -279,6 +316,7 @@ export default function ProcessPage() {
           status={process.job?.status}
           processData={process}
           jobId={process.job?._id}
+          rootProcessName={hierarchy?.path?.[0]?.processName}
         />
 
         {/* Applications List */}

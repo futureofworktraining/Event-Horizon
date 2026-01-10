@@ -394,11 +394,10 @@ export function StepEditDialog({
             <button
               key={tab.id}
               onClick={() => setActiveTab(tab.id)}
-              className={`px-4 py-2 text-sm font-medium border-b-2 transition-colors ${
-                activeTab === tab.id
+              className={`px-4 py-2 text-sm font-medium border-b-2 transition-colors ${activeTab === tab.id
                   ? "border-primary text-primary"
                   : "border-transparent text-muted-foreground hover:text-foreground"
-              }`}
+                }`}
             >
               {tab.label}
             </button>
@@ -538,7 +537,7 @@ export function StepEditDialog({
                       <path d="M12 16v-4M12 8h.01" />
                     </svg>
                     <span>
-                      Po zapisaniu zmian w UI element, aplikacja automatycznie wykryje i oznaczy ten element na screenshocie (bounding box).
+                      After saving changes to the UI element, the application will automatically detect and mark this element on the screenshot (bounding box).
                     </span>
                   </div>
                 </div>

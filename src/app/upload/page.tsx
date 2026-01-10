@@ -66,7 +66,7 @@ export default function UploadPage() {
         {/* Jobs History */}
         <div>
           <Card>
-            <CardHeader>
+            <CardHeader className="border-b border-zinc-200 dark:border-zinc-800">
               <CardTitle className="flex items-center gap-2">
                 <History className="w-5 h-5 text-violet-600" />
                 Recent Analyses

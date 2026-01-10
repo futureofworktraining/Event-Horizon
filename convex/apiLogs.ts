@@ -1,4 +1,5 @@
 import { v } from "convex/values";
+// Controller for API logs and cost stats
 import { mutation, query, internalMutation } from "./_generated/server";
 
 /**
@@ -112,6 +113,75 @@ export const getCostStats = query({
             totalTokens,
             count,
             byCategory,
+        };
+    },
+});
+
+/**
+ * Get extended log statistics and enriched logs
+ */
+export const getExtendedLogStats = query({
+    args: {
+        limit: v.optional(v.number()),
+    },
+    handler: async (ctx, args) => {
+        const logs = await ctx.db.query("apiLogs").order("desc").take(args.limit || 500);
+
+        // Fetch all unique process IDs
+        const processIds = new Set(logs.map(l => l.processId).filter(Boolean));
+        const processMap = new Map();
+
+        for (const pid of processIds) {
+            if (pid) {
+                const process = await ctx.db.get(pid);
+                if (process) {
+                    processMap.set(pid, process.processName);
+                }
+            }
+        }
+
+        const totalCost = logs.reduce((sum, log) => sum + log.cost, 0);
+        const totalTokens = logs.reduce((sum, log) => sum + log.totalTokens, 0);
+        const count = logs.length;
+
+        // Group by category
+        const byCategory = logs.reduce((acc, log) => {
+            if (!acc[log.category]) {
+                acc[log.category] = { cost: 0, tokens: 0, count: 0 };
+            }
+            acc[log.category].cost += log.cost;
+            acc[log.category].tokens += log.totalTokens;
+            acc[log.category].count += 1;
+            return acc;
+        }, {} as Record<string, { cost: number; tokens: number; count: number }>);
+
+        // Group by project
+        const byProject = logs.reduce((acc, log) => {
+            const pid = log.processId || "unknown";
+            const pName = log.processId ? (processMap.get(log.processId) || "Unknown Project") : "No Project";
+
+            if (!acc[pid]) {
+                acc[pid] = { name: pName, cost: 0, tokens: 0, count: 0 };
+            }
+            acc[pid].cost += log.cost;
+            acc[pid].tokens += log.totalTokens;
+            acc[pid].count += 1;
+            return acc;
+        }, {} as Record<string, { name: string; cost: number; tokens: number; count: number }>);
+
+        // Enrich logs
+        const enrichedLogs = logs.map(log => ({
+            ...log,
+            processName: log.processId ? processMap.get(log.processId) : undefined
+        }));
+
+        return {
+            totalCost,
+            totalTokens,
+            count,
+            byCategory,
+            byProject,
+            logs: enrichedLogs
         };
     },
 });

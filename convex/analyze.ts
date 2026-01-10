@@ -105,14 +105,14 @@ export const analyzeVideo = action({
       // ========================================
       // Phase 1: Download Video
       // ========================================
-      await updateProgress(ctx, args.jobId, 5);
+      await updateProgress(ctx, args.jobId, 0);
 
       const videoUrl = await ctx.storage.getUrl(args.videoStorageId);
       if (!videoUrl) {
         throw new Error("Could not get video URL from storage");
       }
 
-      await updateProgress(ctx, args.jobId, 10);
+      await updateProgress(ctx, args.jobId, 5);
 
       const videoResponse = await fetch(videoUrl);
       if (!videoResponse.ok) {
@@ -124,7 +124,7 @@ export const analyzeVideo = action({
       // ========================================
       // Phase 2: Upload to Gemini
       // ========================================
-      await updateProgress(ctx, args.jobId, 20);
+      await updateProgress(ctx, args.jobId, 15);
 
       console.log("Uploading video to Gemini...");
       const uploadResult = await uploadBufferToGemini(
@@ -139,7 +139,7 @@ export const analyzeVideo = action({
       // ========================================
       // Phase 3: Wait for Processing
       // ========================================
-      await updateProgress(ctx, args.jobId, 35);
+      await updateProgress(ctx, args.jobId, 30);
 
       console.log("Waiting for video processing...");
       const processedFile = await waitForFileProcessing(apiKey, uploadResult);
@@ -148,7 +148,7 @@ export const analyzeVideo = action({
       // ========================================
       // Phase 4: AI Analysis
       // ========================================
-      await updateProgress(ctx, args.jobId, 50);
+      await updateProgress(ctx, args.jobId, 45);
 
       // Get custom prompts and model from database (or use defaults)
       const customPrompts = await ctx.runQuery(internal.settings.getAnalysisPromptsInternal);

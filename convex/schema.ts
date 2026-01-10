@@ -273,6 +273,7 @@ const flowEdgeValidator = v.object({
 
 // Sensitive information bounding box validator
 const sensitiveInfoBoxValidator = v.object({
+  id: v.optional(v.string()),     // Unique ID for the box
   label: v.string(),              // Type of sensitive info (e.g., "SSN", "Credit Card Number")
   box_2d: v.array(v.number()),    // [ymin, xmin, ymax, xmax] normalized 0-1000
   found: v.boolean(),
@@ -564,6 +565,18 @@ export default defineSchema({
     .index("by_timestamp", ["timestamp"])
     .index("by_category", ["category"])
     .index("by_process", ["processId"]),
+
+  // Documents table - stores references to generated PDD files
+  documents: defineTable({
+    processId: v.optional(v.id("processes")), // Link to process
+    storageId: v.id("_storage"), // File in Convex storage
+    name: v.string(), // Display name
+    format: v.union(v.literal("docx"), v.literal("pdf")), // File format
+    createdAt: v.number(),
+    size: v.optional(v.number()), // File size in bytes
+  })
+    .index("by_process", ["processId"])
+    .index("by_created", ["createdAt"]),
 });
 
 // Export validators for use in other files

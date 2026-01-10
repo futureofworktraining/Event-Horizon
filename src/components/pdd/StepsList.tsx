@@ -440,7 +440,7 @@ function StepItem({ step, isExpanded, onToggle, onOpenLightbox, onEdit, onDelete
 
         {/* Right side: Screenshot with preserved aspect ratio */}
         {step.screenshotUrl && (
-          <div className="relative flex-shrink-0 w-[45%] min-w-[200px] max-w-[320px] overflow-visible">
+          <div className="relative flex-shrink-0 w-[40%] min-w-[200px] max-w-[280px] p-3 overflow-visible flex items-center justify-center">
             <div
               onClick={() => onOpenLightbox(step.stepNumber)}
               className="relative cursor-pointer group aspect-[16/10] bg-muted flex items-center justify-center overflow-hidden ring-1 ring-gray-300 shadow-md rounded-md"

@@ -485,14 +485,19 @@ export const addSensitiveBox = mutation({
     }
 
     const existingBoxes = step.sensitiveInfoBoxes || [];
-    const updatedBoxes = [...existingBoxes, args.sensitiveBox];
+    // Ensure the new box has a unique ID
+    const newBox = {
+      ...args.sensitiveBox,
+      id: args.sensitiveBox.id || Math.random().toString(36).substring(2, 11),
+    };
+    const updatedBoxes = [...existingBoxes, newBox];
 
     await ctx.db.patch(args.stepId, {
       sensitiveInfoBoxes: updatedBoxes,
       sensitiveInfoDetected: true,
     });
 
-    return { success: true, boxCount: updatedBoxes.length };
+    return { success: true, boxCount: updatedBoxes.length, boxId: newBox.id };
   },
 });
 
@@ -500,7 +505,8 @@ export const addSensitiveBox = mutation({
 export const removeSensitiveBox = mutation({
   args: {
     stepId: v.id("steps"),
-    boxIndex: v.number(),
+    boxIndex: v.optional(v.number()),
+    boxId: v.optional(v.string()),
   },
   handler: async (ctx, args) => {
     const step = await ctx.db.get(args.stepId);
@@ -509,18 +515,36 @@ export const removeSensitiveBox = mutation({
     }
 
     const existingBoxes = step.sensitiveInfoBoxes || [];
-    if (args.boxIndex < 0 || args.boxIndex >= existingBoxes.length) {
-      throw new Error("Invalid box index");
+    let updatedBoxes: any[];
+
+    if (args.boxId) {
+      updatedBoxes = existingBoxes.filter((box) => box.id !== args.boxId);
+      if (updatedBoxes.length === existingBoxes.length && args.boxIndex === undefined) {
+        // If boxId was provided but not found, and no index provided, return success anyway (already deleted)
+        return { success: true, boxCount: existingBoxes.length };
+      }
     }
 
-    const updatedBoxes = existingBoxes.filter((_, idx) => idx !== args.boxIndex);
+    // Fallback to index if boxId not found or not provided
+    if (args.boxId === undefined || (args.boxId && updatedBoxes!.length === existingBoxes.length)) {
+      if (args.boxIndex !== undefined) {
+        if (args.boxIndex < 0 || args.boxIndex >= existingBoxes.length) {
+          // Instead of throwing, just return current state if index is invalid
+          // This avoids frontend crashes durante rapid interactions
+          return { success: true, boxCount: existingBoxes.length };
+        }
+        updatedBoxes = existingBoxes.filter((_, idx) => idx !== args.boxIndex);
+      } else {
+        return { success: true, boxCount: existingBoxes.length };
+      }
+    }
 
     await ctx.db.patch(args.stepId, {
-      sensitiveInfoBoxes: updatedBoxes.length > 0 ? updatedBoxes : undefined,
-      sensitiveInfoDetected: updatedBoxes.length > 0,
+      sensitiveInfoBoxes: updatedBoxes!.length > 0 ? updatedBoxes! : undefined,
+      sensitiveInfoDetected: updatedBoxes!.length > 0,
     });
 
-    return { success: true, boxCount: updatedBoxes.length };
+    return { success: true, boxCount: updatedBoxes!.length };
   },
 });
 
@@ -569,7 +593,8 @@ export const clearSensitiveBoxes = mutation({
 export const updateSensitiveBox = mutation({
   args: {
     stepId: v.id("steps"),
-    boxIndex: v.number(),
+    boxIndex: v.optional(v.number()),
+    boxId: v.optional(v.string()),
     box_2d: v.array(v.number()),
   },
   handler: async (ctx, args) => {
@@ -579,13 +604,22 @@ export const updateSensitiveBox = mutation({
     }
 
     const existingBoxes = step.sensitiveInfoBoxes || [];
-    if (args.boxIndex < 0 || args.boxIndex >= existingBoxes.length) {
-      throw new Error("Invalid box index");
-    }
+    let updatedBoxes: any[];
 
-    const updatedBoxes = existingBoxes.map((box, idx) =>
-      idx === args.boxIndex ? { ...box, box_2d: args.box_2d } : box
-    );
+    if (args.boxId) {
+      updatedBoxes = existingBoxes.map((box) =>
+        box.id === args.boxId ? { ...box, box_2d: args.box_2d } : box
+      );
+    } else if (args.boxIndex !== undefined) {
+      if (args.boxIndex < 0 || args.boxIndex >= existingBoxes.length) {
+        throw new Error("Invalid box index");
+      }
+      updatedBoxes = existingBoxes.map((box, idx) =>
+        idx === args.boxIndex ? { ...box, box_2d: args.box_2d } : box
+      );
+    } else {
+      throw new Error("Either boxId or boxIndex must be provided");
+    }
 
     await ctx.db.patch(args.stepId, {
       sensitiveInfoBoxes: updatedBoxes,
@@ -599,7 +633,8 @@ export const updateSensitiveBox = mutation({
 export const updateSensitiveBoxLabel = mutation({
   args: {
     stepId: v.id("steps"),
-    boxIndex: v.number(),
+    boxIndex: v.optional(v.number()),
+    boxId: v.optional(v.string()),
     label: v.string(),
   },
   handler: async (ctx, args) => {
@@ -609,13 +644,22 @@ export const updateSensitiveBoxLabel = mutation({
     }
 
     const existingBoxes = step.sensitiveInfoBoxes || [];
-    if (args.boxIndex < 0 || args.boxIndex >= existingBoxes.length) {
-      throw new Error("Invalid box index");
-    }
+    let updatedBoxes: any[];
 
-    const updatedBoxes = existingBoxes.map((box, idx) =>
-      idx === args.boxIndex ? { ...box, label: args.label } : box
-    );
+    if (args.boxId) {
+      updatedBoxes = existingBoxes.map((box) =>
+        box.id === args.boxId ? { ...box, label: args.label } : box
+      );
+    } else if (args.boxIndex !== undefined) {
+      if (args.boxIndex < 0 || args.boxIndex >= existingBoxes.length) {
+        throw new Error("Invalid box index");
+      }
+      updatedBoxes = existingBoxes.map((box, idx) =>
+        idx === args.boxIndex ? { ...box, label: args.label } : box
+      );
+    } else {
+      throw new Error("Either boxId or boxIndex must be provided");
+    }
 
     await ctx.db.patch(args.stepId, {
       sensitiveInfoBoxes: updatedBoxes,
