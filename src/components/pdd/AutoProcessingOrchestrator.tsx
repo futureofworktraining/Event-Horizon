@@ -278,12 +278,7 @@ export function AutoProcessingOrchestrator({ jobId }: AutoProcessingOrchestrator
 
       // Phase 2: Bounding boxes
       if (processingStatus?.job.autoBoundingBoxes) {
-        const didWork = await processBoundingBoxes();
-        if (didWork) {
-          toast.success("All bounding boxes generated", {
-            description: "UI element detection completed for all steps.",
-          });
-        }
+        await processBoundingBoxes();
       }
 
       // Small delay
@@ -330,15 +325,13 @@ export function AutoProcessingOrchestrator({ jobId }: AutoProcessingOrchestrator
   if (!processingStatus) return null;
   if (state.phase === "idle" && !hasStartedRef.current) return null;
 
-  // Auto-hide after completion with no errors
-  if (state.phase === "complete" && state.errors.length === 0) {
-    // Show briefly then hide
-    setTimeout(() => setIsDismissed(true), 3000);
-  }
-
+  // Don't show if we already reached 100% and it's complete (unless there was an error)
   const totalWork = state.totalScreenshots + state.totalBoundingBoxes + state.totalSensitiveInfo;
   const completedWork = state.processedScreenshots + state.processedBoundingBoxes + state.processedSensitiveInfo;
   const progress = totalWork > 0 ? (completedWork / totalWork) * 100 : 0;
+
+  if (progress >= 100 && state.phase === "complete" && state.errors.length === 0) return null;
+  if (state.phase === "complete" && state.errors.length === 0) return null;
 
   return (
     <div className="fixed bottom-4 right-4 z-50">
