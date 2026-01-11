@@ -325,6 +325,15 @@ export function AutoProcessingOrchestrator({ jobId }: AutoProcessingOrchestrator
   if (!processingStatus) return null;
   if (state.phase === "idle" && !hasStartedRef.current) return null;
 
+  // Check if job is completed and confirmed no work remaining
+  const isJobCompleted = processingStatus.job.status === "completed" || processingStatus.job.status === "failed";
+  const noWorkRemaining =
+    processingStatus.totals.totalScreenshotsNeeded === 0 &&
+    processingStatus.totals.totalBoundingBoxesNeeded === 0 &&
+    processingStatus.totals.totalSensitiveInfoNeeded === 0;
+
+  if (isJobCompleted && noWorkRemaining && state.phase === "idle") return null;
+
   // Don't show if we already reached 100% and it's complete (unless there was an error)
   const totalWork = state.totalScreenshots + state.totalBoundingBoxes + state.totalSensitiveInfo;
   const completedWork = state.processedScreenshots + state.processedBoundingBoxes + state.processedSensitiveInfo;
@@ -410,51 +419,53 @@ export function AutoProcessingOrchestrator({ jobId }: AutoProcessingOrchestrator
             )}
 
             {/* Progress bar */}
-            <div className="space-y-1">
-              <div className="flex justify-between text-xs text-muted-foreground">
-                <span>
-                  {state.phase === "screenshots" && (
-                    <>Screenshots: {state.processedScreenshots} / {state.totalScreenshots}</>
-                  )}
-                  {state.phase === "bounding_boxes" && (
-                    <>
-                      {state.totalScreenshots > 0 && (
-                        <span className="text-green-600 mr-2">
-                          {state.processedScreenshots} screenshots
-                        </span>
-                      )}
-                      Boxes: {state.processedBoundingBoxes} / {state.totalBoundingBoxes}
-                    </>
-                  )}
-                  {state.phase === "sensitive_info" && (
-                    <>
-                      Info: {state.processedSensitiveInfo} / {state.totalSensitiveInfo}
-                    </>
-                  )}
-                  {state.phase === "complete" && (
-                    <>
-                      {state.processedScreenshots > 0 && `${state.processedScreenshots} screenshots`}
-                      {state.processedScreenshots > 0 && state.processedBoundingBoxes > 0 && ", "}
-                      {state.processedBoundingBoxes > 0 && `${state.processedBoundingBoxes} boxes`}
-                    </>
-                  )}
-                </span>
-                <span>{Math.round(progress)}%</span>
+            {state.phase !== "idle" && (
+              <div className="space-y-1">
+                <div className="flex justify-between text-xs text-muted-foreground">
+                  <span>
+                    {state.phase === "screenshots" && (
+                      <>Screenshots: {state.processedScreenshots} / {state.totalScreenshots}</>
+                    )}
+                    {state.phase === "bounding_boxes" && (
+                      <>
+                        {state.totalScreenshots > 0 && (
+                          <span className="text-green-600 mr-2">
+                            {state.processedScreenshots} screenshots
+                          </span>
+                        )}
+                        Boxes: {state.processedBoundingBoxes} / {state.totalBoundingBoxes}
+                      </>
+                    )}
+                    {state.phase === "sensitive_info" && (
+                      <>
+                        Info: {state.processedSensitiveInfo} / {state.totalSensitiveInfo}
+                      </>
+                    )}
+                    {state.phase === "complete" && (
+                      <>
+                        {state.processedScreenshots > 0 && `${state.processedScreenshots} screenshots`}
+                        {state.processedScreenshots > 0 && state.processedBoundingBoxes > 0 && ", "}
+                        {state.processedBoundingBoxes > 0 && `${state.processedBoundingBoxes} boxes`}
+                      </>
+                    )}
+                  </span>
+                  <span>{progress > 0 ? `${Math.round(progress)}%` : ""}</span>
+                </div>
+                <div className="w-full h-2 bg-muted rounded-full overflow-hidden">
+                  <div
+                    className={cn(
+                      "h-full transition-all duration-300",
+                      state.phase === "screenshots" && "bg-amber-500",
+                      state.phase === "bounding_boxes" && "bg-blue-500",
+                      state.phase === "sensitive_info" && "bg-purple-500",
+                      state.phase === "complete" && "bg-green-500",
+                      state.phase === "error" && "bg-red-500"
+                    )}
+                    style={{ width: `${progress}%` }}
+                  />
+                </div>
               </div>
-              <div className="w-full h-2 bg-muted rounded-full overflow-hidden">
-                <div
-                  className={cn(
-                    "h-full transition-all duration-300",
-                    state.phase === "screenshots" && "bg-amber-500",
-                    state.phase === "bounding_boxes" && "bg-blue-500",
-                    state.phase === "sensitive_info" && "bg-purple-500",
-                    state.phase === "complete" && "bg-green-500",
-                    state.phase === "error" && "bg-red-500"
-                  )}
-                  style={{ width: `${progress}%` }}
-                />
-              </div>
-            </div>
+            )}
 
             {/* Errors */}
             {state.errors.length > 0 && (

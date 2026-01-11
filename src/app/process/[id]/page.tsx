@@ -625,6 +625,8 @@ export default function ProcessPage() {
                 onStepSelect={handleStepClick}
                 flowNodes={process.flow?.nodes}
                 flowEdges={process.flow?.edges}
+                subprocesses={process.subprocesses}
+                onSubprocessClick={handleSubprocessClick}
               />
             )}
           </div>

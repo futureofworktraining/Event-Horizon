@@ -45,6 +45,12 @@ export function VideoPlayer({
   onVideoLoaded,
 }: VideoPlayerProps) {
   const [mode, setMode] = useState<"mini" | "expanded">(initialMode);
+  const [initialVolume, setInitialVolume] = useState(0);
+  const [internalDuration, setInternalDuration] = useState(duration);
+
+  useEffect(() => {
+    setInternalDuration(duration);
+  }, [duration]);
   const [volume, setVolume] = useState(0);
   const [isMuted, setIsMuted] = useState(true);
   const [showVolumeSlider, setShowVolumeSlider] = useState(false);
@@ -56,6 +62,7 @@ export function VideoPlayer({
 
   // Format timestamp
   const formatTimestamp = (seconds: number): string => {
+    if (!isFinite(seconds) || isNaN(seconds)) return "00:00.000";
     const mins = Math.floor(seconds / 60);
     const secs = Math.floor(seconds % 60);
     const ms = Math.floor((seconds % 1) * 1000);
@@ -104,13 +111,13 @@ export function VideoPlayer({
   // Skip forward/backward
   const skip = (seconds: number) => {
     if (videoRef.current) {
-      const newTime = Math.max(0, Math.min(duration, videoRef.current.currentTime + seconds));
+      const newTime = Math.max(0, Math.min(internalDuration, videoRef.current.currentTime + seconds));
       seekTo(newTime);
     }
   };
 
   // Progress percentage
-  const progress = duration > 0 ? (currentTime / duration) * 100 : 0;
+  const progress = internalDuration > 0 ? (currentTime / internalDuration) * 100 : 0;
 
   // Slider styles
   const sliderClass = `appearance-none cursor-pointer rounded-full
@@ -136,10 +143,10 @@ export function VideoPlayer({
           crossOrigin="anonymous"
           muted
           className={`bg-black block cursor-pointer ${isFullscreen
-              ? "max-w-full max-h-full w-auto h-auto object-contain"
-              : mode === "mini"
-                ? "w-full max-h-56"
-                : "w-full max-h-[60vh]"
+            ? "max-w-full max-h-full w-auto h-auto object-contain"
+            : mode === "mini"
+              ? "w-full max-h-56"
+              : "w-full max-h-[60vh]"
             }`}
           style={isFullscreen ? { height: "100%", width: "100%", objectFit: "contain" } : undefined}
           onClick={togglePlayPause}
@@ -156,6 +163,11 @@ export function VideoPlayer({
               }
               videoRef.current.volume = volume;
               videoRef.current.muted = true;
+
+              const vidDuration = videoRef.current.duration;
+              if (vidDuration && !isNaN(vidDuration) && vidDuration !== Infinity) {
+                setInternalDuration(vidDuration);
+              }
             }
           }}
           onCanPlay={() => {
@@ -166,6 +178,12 @@ export function VideoPlayer({
           onSeeked={() => setIsSeeking(false)}
           onWaiting={() => setIsBuffering(true)}
           onPlaying={() => setIsBuffering(false)}
+          onDurationChange={(e) => {
+            const vidDuration = (e.target as HTMLVideoElement).duration;
+            if (vidDuration && !isNaN(vidDuration) && vidDuration !== Infinity) {
+              setInternalDuration(vidDuration);
+            }
+          }}
         />
         <canvas ref={canvasRef} className="hidden" />
 
@@ -222,7 +240,7 @@ export function VideoPlayer({
           <input
             type="range"
             min={0}
-            max={duration || 100}
+            max={internalDuration || 100}
             step={0.01}
             value={currentTime}
             onChange={(e) => seekTo(parseFloat(e.target.value))}
@@ -243,7 +261,7 @@ export function VideoPlayer({
             </span>
             <span className="text-zinc-500 font-mono text-sm mx-2">/</span>
             <span className="text-zinc-400 font-mono text-sm">
-              {formatTimestamp(duration)}
+              {formatTimestamp(internalDuration)}
             </span>
           </div>
         )}

@@ -1289,6 +1289,7 @@ export function ScreenshotLightbox({
                             position: "absolute",
                             left: "50%",
                             top: "50%",
+                            width: "100%",
                             transform: `translate(-${centerX}%, -${centerY}%) scale(${zoomFactor})`,
                             transformOrigin: `${centerX}% ${centerY}%`,
                             pointerEvents: "none",
@@ -1298,7 +1299,7 @@ export function ScreenshotLightbox({
                             src={step.screenshotUrl!}
                             alt={`Cropped element: ${elementName}`}
                             draggable={false}
-                            style={{ display: "block" }}
+                            style={{ display: "block", width: "100%" }}
                           />
                         </div>
                       </div>
@@ -1340,8 +1341,8 @@ export function ScreenshotLightbox({
                       <button
                         onClick={() => setShowElement(!showElement)}
                         className={`px-2 py-0.5 rounded text-xs transition-colors flex items-center gap-1 ${showElement
-                            ? "bg-blue-600 text-white hover:bg-blue-700"
-                            : "bg-blue-100 text-blue-700 hover:bg-blue-200"
+                          ? "bg-blue-600 text-white hover:bg-blue-700"
+                          : "bg-blue-100 text-blue-700 hover:bg-blue-200"
                           }`}
                       >
                         <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="h-3.5 w-3.5">
@@ -1369,10 +1370,10 @@ export function ScreenshotLightbox({
                           }}
                           disabled={isDetectingUi}
                           className={`px-2 py-0.5 rounded text-xs transition-colors flex items-center gap-1 ${isDetectingUi
-                              ? "bg-green-400 text-white cursor-wait"
-                              : showDetectUiDialog
-                                ? "bg-green-600 text-white"
-                                : "bg-green-100 text-green-700 hover:bg-green-200"
+                            ? "bg-green-400 text-white cursor-wait"
+                            : showDetectUiDialog
+                              ? "bg-green-600 text-white"
+                              : "bg-green-100 text-green-700 hover:bg-green-200"
                             }`}
                           title={step.boundingBox?.found ? "Re-detect UI element bounding box" : "Detect UI element bounding box"}
                         >
@@ -1435,10 +1436,10 @@ export function ScreenshotLightbox({
                         }}
                         disabled={isDetectingSensitive || (showDetectSensitiveDialog && !detectSensitivePrompt.trim())}
                         className={`px-2 py-0.5 rounded text-xs transition-colors flex items-center gap-1 ${isDetectingSensitive
-                            ? "bg-red-400 text-white cursor-wait"
-                            : showDetectSensitiveDialog
-                              ? "bg-red-600 text-white disabled:bg-red-400"
-                              : "bg-red-100 text-red-700 hover:bg-red-200"
+                          ? "bg-red-400 text-white cursor-wait"
+                          : showDetectSensitiveDialog
+                            ? "bg-red-600 text-white disabled:bg-red-400"
+                            : "bg-red-100 text-red-700 hover:bg-red-200"
                           }`}
                         title={step.sensitiveInfoBoxes?.length ? "Re-detect sensitive information" : "Detect sensitive information"}
                       >
@@ -1486,8 +1487,8 @@ export function ScreenshotLightbox({
                     <button
                       onClick={() => setDrawingMode(drawingMode === "ui-element" ? "none" : "ui-element")}
                       className={`px-2 py-0.5 rounded text-xs transition-colors flex items-center gap-1 ${drawingMode === "ui-element"
-                          ? "bg-green-600 text-white hover:bg-green-700"
-                          : "bg-green-100 text-green-700 hover:bg-green-200"
+                        ? "bg-green-600 text-white hover:bg-green-700"
+                        : "bg-green-100 text-green-700 hover:bg-green-200"
                         }`}
                       title="Draw UI element bounding box"
                     >
@@ -1501,8 +1502,8 @@ export function ScreenshotLightbox({
                     <button
                       onClick={() => setDrawingMode(drawingMode === "sensitive" ? "none" : "sensitive")}
                       className={`px-2 py-0.5 rounded text-xs transition-colors flex items-center gap-1 ${drawingMode === "sensitive"
-                          ? "bg-red-600 text-white hover:bg-red-700"
-                          : "bg-red-100 text-red-700 hover:bg-red-200"
+                        ? "bg-red-600 text-white hover:bg-red-700"
+                        : "bg-red-100 text-red-700 hover:bg-red-200"
                         }`}
                       title="Draw sensitive information bounding box"
                     >
@@ -1517,10 +1518,10 @@ export function ScreenshotLightbox({
                         onClick={() => setShowScreenshotMenu(!showScreenshotMenu)}
                         disabled={isUploadingScreenshot || isReverting}
                         className={`px-2 py-0.5 rounded text-xs transition-colors flex items-center gap-1 ${showScreenshotMenu
-                            ? "bg-gray-600 text-white"
-                            : (isUploadingScreenshot || isReverting)
-                              ? "bg-gray-300 text-gray-500 cursor-wait"
-                              : "bg-gray-100 text-gray-700 hover:bg-gray-200"
+                          ? "bg-gray-600 text-white"
+                          : (isUploadingScreenshot || isReverting)
+                            ? "bg-gray-300 text-gray-500 cursor-wait"
+                            : "bg-gray-100 text-gray-700 hover:bg-gray-200"
                           }`}
                       >
                         {(isUploadingScreenshot || isReverting) ? (
@@ -1658,8 +1659,8 @@ export function ScreenshotLightbox({
                   <button
                     onClick={() => setShowDetails(!showDetails)}
                     className={`flex items-center gap-1 px-3 py-1.5 rounded-md border transition-colors ${showDetails
-                        ? "bg-primary text-primary-foreground"
-                        : "bg-background hover:bg-muted"
+                      ? "bg-primary text-primary-foreground"
+                      : "bg-background hover:bg-muted"
                       }`}
                   >
                     <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="h-4 w-4">
@@ -1730,8 +1731,8 @@ export function ScreenshotLightbox({
                       onClick={handleSaveBox}
                       disabled={!labelInput.trim()}
                       className={`px-4 py-2 text-sm text-white rounded-md transition-colors ${drawingMode === "ui-element"
-                          ? "bg-green-600 hover:bg-green-700 disabled:bg-green-300"
-                          : "bg-red-600 hover:bg-red-700 disabled:bg-red-300"
+                        ? "bg-green-600 hover:bg-green-700 disabled:bg-green-300"
+                        : "bg-red-600 hover:bg-red-700 disabled:bg-red-300"
                         }`}
                     >
                       Save
