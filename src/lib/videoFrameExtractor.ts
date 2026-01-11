@@ -76,8 +76,7 @@ function captureFrame(video: HTMLVideoElement, quality: number = 0.85): Promise<
 
     canvas.toBlob(
       (blob) => resolve(blob),
-      "image/jpeg",
-      quality
+      "image/png"
     );
   });
 }

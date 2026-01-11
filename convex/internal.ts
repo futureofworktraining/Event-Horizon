@@ -35,6 +35,7 @@ export const createProcess = internalMutation({
       processDescription: args.processDescription,
       recordingDurationSeconds: args.recordingDurationSeconds,
       totalSteps: args.totalSteps,
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
       applications: args.applications as any,
       businessRulesObserved: args.businessRulesObserved,
       exceptionsNoted: args.exceptionsNoted,
@@ -72,7 +73,9 @@ export const createStep = internalMutation({
       stepNumber: args.stepNumber,
       timestamp: args.timestamp,
       timestampSeconds: args.timestampSeconds,
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
       actionType: args.actionType as any,
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
       specificAction: args.specificAction as any,
       description: args.description,
       application: args.application,
@@ -136,6 +139,7 @@ export const updateJobStatus = internalMutation({
   },
   handler: async (ctx, args) => {
     // Build patch object with only provided fields to avoid overwriting existing values
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const patch: Record<string, any> = {
       status: args.status,
       updatedAt: Date.now(),

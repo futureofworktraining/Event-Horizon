@@ -21,15 +21,34 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { Badge } from "@/components/ui/badge";
 import { Id } from "../../../convex/_generated/dataModel";
+import { useState } from "react";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
 
 export default function DocumentsPage() {
   const documents = useQuery(api.documents.listDocuments);
   const deleteDocument = useMutation(api.documents.deleteDocument);
 
-  const handleDelete = async (id: Id<"documents">) => {
-    if (confirm("Are you sure you want to delete this document?")) {
-      await deleteDocument({ documentId: id });
+  const [deleteId, setDeleteId] = useState<Id<"documents"> | null>(null);
+  const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
+
+  const handleDelete = async () => {
+    if (deleteId) {
+      await deleteDocument({ documentId: deleteId });
+      setIsDeleteDialogOpen(false);
+      setDeleteId(null);
     }
+  };
+
+  const openDeleteDialog = (id: Id<"documents">) => {
+    setDeleteId(id);
+    setIsDeleteDialogOpen(true);
   };
 
   const formatFileSize = (bytes?: number) => {
@@ -123,7 +142,7 @@ export default function DocumentsPage() {
                           <DropdownMenuContent align="end">
                             <DropdownMenuItem
                               className="text-destructive focus:text-destructive cursor-pointer"
-                              onClick={() => handleDelete(doc._id)}
+                              onClick={() => openDeleteDialog(doc._id)}
                             >
                               <Trash2 className="w-4 h-4 mr-2" />
                               Delete
@@ -139,6 +158,34 @@ export default function DocumentsPage() {
           )}
         </CardContent>
       </Card>
+      {/* Delete Confirmation Modal */}
+      <Dialog open={isDeleteDialogOpen} onOpenChange={setIsDeleteDialogOpen}>
+        <DialogContent className="sm:max-w-[425px]">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2 text-destructive">
+              <Trash2 className="w-5 h-5" />
+              Delete Document
+            </DialogTitle>
+            <DialogDescription className="py-2">
+              Are you sure you want to delete this document? This action cannot be undone.
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter className="gap-2">
+            <Button
+              variant="outline"
+              onClick={() => setIsDeleteDialogOpen(false)}
+            >
+              Cancel
+            </Button>
+            <Button
+              variant="destructive"
+              onClick={handleDelete}
+            >
+              Delete
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

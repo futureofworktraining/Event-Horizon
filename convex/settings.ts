@@ -45,9 +45,18 @@ export const getApiKeyStatus = query({
       .withIndex("by_key", (q) => q.eq("key", "gemini_api_key"))
       .first();
 
+    // Create masked value showing first 4 chars + masked rest
+    let maskedValue = "";
+    if (setting?.value && setting.value.length > 4) {
+      maskedValue = setting.value.substring(0, 4) + "••••••••••••";
+    } else if (setting?.value) {
+      maskedValue = "••••••••••••";
+    }
+
     return {
       isConfigured: !!setting?.value,
       lastUpdated: setting?.updatedAt || null,
+      maskedValue,
     };
   },
 });

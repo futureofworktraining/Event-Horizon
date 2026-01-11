@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
 "use client";
 
 import { useState } from "react";
@@ -87,7 +88,7 @@ export function ApiLogsDropdown() {
             </DropdownMenuTrigger>
             <DropdownMenuContent
                 align="end"
-                className="w-80 p-0 shadow-hard border-2 border-foreground bg-background bg-dot-pattern overflow-hidden data-[state=open]:animate-roll-out"
+                className="w-[420px] p-0 shadow-hard border-2 border-foreground bg-background bg-dot-pattern overflow-hidden"
             >
                 <div className="p-4 bg-background">
                     <div className="flex items-center justify-between mb-4">

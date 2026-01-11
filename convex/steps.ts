@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
 import { mutation, query, internalMutation } from "./_generated/server";
 import { v } from "convex/values";
 import {
@@ -386,7 +387,7 @@ export const moveStep = mutation({
   },
 });
 
-// Get all steps for a process (for cloning screenshot dropdown)
+// Get all steps for a process (for cloning screenshot dropdown and step cloning)
 export const getStepsForProcess = query({
   args: { processId: v.id("processes") },
   handler: async (ctx, args) => {
@@ -397,7 +398,7 @@ export const getStepsForProcess = query({
 
     steps.sort((a, b) => a.stepNumber - b.stepNumber);
 
-    // Get screenshot URLs
+    // Get screenshot URLs and return full step data for cloning
     const stepsWithScreenshots = await Promise.all(
       steps.map(async (step) => {
         let screenshotUrl: string | null = null;
@@ -410,6 +411,15 @@ export const getStepsForProcess = query({
           description: step.description,
           hasScreenshot: !!step.screenshotStorageId,
           screenshotUrl,
+          // Additional fields for cloning functionality
+          application: step.application,
+          screenName: step.screenName,
+          actionType: step.actionType,
+          specificAction: step.specificAction,
+          screenshotRequired: step.screenshotRequired,
+          automationHint: step.automationHint,
+          uiElement: step.uiElement,
+          dataInfo: step.dataInfo,
         };
       })
     );

@@ -8,8 +8,8 @@
  */
 
 import { v } from "convex/values";
-import { action } from "./_generated/server";
-import { internal, api } from "./_generated/api";
+import { action, ActionCtx } from "./_generated/server";
+import { internal } from "./_generated/api";
 import { Id } from "./_generated/dataModel";
 
 // Prompts and schemas
@@ -39,7 +39,7 @@ import {
 // ============================================
 
 async function updateProgress(
-  ctx: any,
+  ctx: ActionCtx,
   jobId: Id<"jobs">,
   progress: number,
   extras: { rawAiResponse?: string } = {}

@@ -340,7 +340,7 @@ export function SensitiveInfoDetector({
           </label>
           <p className="text-xs text-orange-700 mb-2">
             Describe what information should be marked as sensitive (e.g.,
-            "SSN, credit card numbers, passwords")
+            &quot;SSN, credit card numbers, passwords&quot;)
           </p>
           <Textarea
             value={prompt}

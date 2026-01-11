@@ -210,10 +210,77 @@
     }
   }
 
+  @keyframes roll-up {
+    from {
+      transform: scaleY(1);
+      opacity: 1;
+    }
+
+    to {
+      transform: scaleY(0);
+      opacity: 0;
+    }
+  }
+
   .animate-roll-out {
     animation: roll-out 0.2s cubic-bezier(0.16, 1, 0.3, 1) forwards;
     transform-origin: top;
   }
+
+}
+
+/*
+ * Global override for tw-animate-css animations
+ * Disable fly-in/slide animations for all popups - use roll-out/roll-up (blind effect)
+ * This targets all Radix UI popup elements (dropdown, popover, select, context-menu, tooltip, etc.)
+ */
+[data-radix-popper-content-wrapper],
+[data-radix-menu-content],
+[role="menu"],
+[role="listbox"],
+[data-slot="dropdown-menu-content"],
+[data-slot="dropdown-menu-sub-content"],
+[data-slot="popover-content"],
+[data-slot="select-content"],
+[data-slot="context-menu-content"],
+[data-slot="tooltip-content"],
+[data-state="open"][data-side] {
+  /* Disable all slide/translate animations variables just in case */
+  --tw-enter-translate-x: 0 !important;
+  --tw-enter-translate-y: 0 !important;
+  --tw-exit-translate-x: 0 !important;
+  --tw-exit-translate-y: 0 !important;
+  --tw-enter-scale: 1 !important;
+  --tw-enter-opacity: 1 !important;
+
+  transform-origin: var(--radix-popper-transform-origin, top) !important;
+}
+
+/* Apply roll animations based on state - using :where to lower specificity if needed, but here we want to override */
+[data-state="open"]:is([data-radix-popper-content-wrapper],
+  [data-radix-menu-content],
+  [role="menu"],
+  [role="listbox"],
+  [data-slot="dropdown-menu-content"],
+  [data-slot="dropdown-menu-sub-content"],
+  [data-slot="popover-content"],
+  [data-slot="select-content"],
+  [data-slot="context-menu-content"],
+  [data-slot="tooltip-content"]) {
+  animation: roll-out 0.2s cubic-bezier(0.16, 1, 0.3, 1) forwards !important;
+}
+
+[data-state="closed"]:is([data-radix-popper-content-wrapper],
+  [data-radix-menu-content],
+  [role="menu"],
+  [role="listbox"],
+  [data-slot="dropdown-menu-content"],
+  [data-slot="dropdown-menu-sub-content"],
+  [data-slot="popover-content"],
+  [data-slot="select-content"],
+  [data-slot="context-menu-content"],
+  [data-slot="tooltip-content"]) {
+  animation: roll-up 0.15s ease-in forwards !important;
 }
 
 /* Custom scrollbar for professional look */
@@ -245,7 +312,7 @@
 /* Smooth transitions */
 @layer base {
   * {
-    transition-property: background-color, border-color, color, fill, stroke, box-shadow, transform;
+    transition-property: background-color, border-color, color, fill, stroke, box-shadow;
     transition-timing-function: cubic-bezier(0.4, 0, 0.2, 1);
     transition-duration: 150ms;
   }

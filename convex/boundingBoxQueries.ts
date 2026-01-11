@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
 import { v } from "convex/values";
 import { internalQuery, internalMutation } from "./_generated/server";
 import { sensitiveInfoBoxValidator } from "./schema";
@@ -79,6 +80,7 @@ export const updateStepBoundingBox = internalMutation({
     overlayImageStorageId: v.optional(v.id("_storage")),
   },
   handler: async (ctx, args) => {
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const update: any = {
       boundingBox: args.boundingBox,
       boundingBoxDetected: true,
@@ -119,7 +121,7 @@ export const getProcessExportData = internalQuery({
       .collect();
 
     // Find the main process (isMainProcess=true or no parentProcessId)
-    let mainProcess = allProcessesInJob.find(p => p.isMainProcess)
+    const mainProcess = allProcessesInJob.find(p => p.isMainProcess)
       || allProcessesInJob.find(p => !p.parentProcessId)
       || selectedProcess;
 

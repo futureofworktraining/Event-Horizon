@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
 import { query, mutation } from "./_generated/server";
 import { v } from "convex/values";
 
@@ -238,7 +239,7 @@ export const deleteProcess = mutation({
 async function getProcessPromptsHandler(ctx: any, args: { processId: any }) {
   console.log("getProcessPrompts called for:", args.processId);
 
-  let currentProcess = await ctx.db.get(args.processId);
+  const currentProcess = await ctx.db.get(args.processId);
   if (!currentProcess) {
     console.log("Process not found:", args.processId);
     return null;

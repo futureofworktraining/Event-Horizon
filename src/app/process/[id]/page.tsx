@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
 "use client";
 
 import { useState, useCallback, useEffect, useRef } from "react";
@@ -13,6 +14,7 @@ import { BoundingBoxDetector } from "@/components/pdd/BoundingBoxDetector";
 import { SensitiveInfoDetector } from "@/components/pdd/SensitiveInfoDetector";
 import { AnalysisPromptEditor } from "@/components/pdd/AnalysisPromptEditor";
 import { AutoProcessingOrchestrator } from "@/components/pdd/AutoProcessingOrchestrator";
+import { PddGenerationToast } from "@/components/pdd/PddGenerationToast";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import {
@@ -84,9 +86,9 @@ export default function ProcessPage() {
   );
 
   // Job status monitoring for notifications
-  // eslint-disable-next-line react-hooks/rules-of-hooks
+   
   // Job status monitoring for notifications
-  // eslint-disable-next-line react-hooks/rules-of-hooks
+   
   useEffect(() => {
     if (!process?.job?.status) return;
 
@@ -254,6 +256,10 @@ export default function ProcessPage() {
             errorMessage={process.job.errorMessage}
           />
         </div>
+        {/* PDD Generation Toast */}
+        {process.job._id && (
+          <PddGenerationToast jobId={process.job._id} />
+        )}
       </div>
     );
   }
@@ -635,7 +641,10 @@ export default function ProcessPage() {
 
       {/* Auto-processing orchestrator - handles screenshots and bounding boxes automatically */}
       {process.job?._id && (
-        <AutoProcessingOrchestrator jobId={process.job._id} />
+        <>
+          <AutoProcessingOrchestrator jobId={process.job._id} />
+          <PddGenerationToast jobId={process.job._id} />
+        </>
       )}
     </div>
   );

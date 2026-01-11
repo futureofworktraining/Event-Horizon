@@ -1,14 +1,14 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
 "use client";
 
 import { useState, useEffect, useMemo } from "react";
-import { useAction, useMutation, useQuery } from "convex/react";
+import { useAction, useMutation } from "convex/react";
 import { api } from "../../../convex/_generated/api";
 import { Id } from "../../../convex/_generated/dataModel";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { ActionTypeBadge } from "./ActionTypeBadge";
 import { StepDetail } from "./StepDetail";
-import { BoundingBoxOverlay } from "./BoundingBoxOverlay";
 import { StepEditDialog } from "./StepEditDialog";
 import { AddStepDialog } from "./AddStepDialog";
 import { ScreenshotLightbox, LightboxStep } from "./ScreenshotLightbox";
@@ -31,6 +31,7 @@ interface ProcessStep {
   _id: string;
   stepNumber: number;
   timestamp: string;
+  timestampSeconds?: number;
   actionType: string;
   specificAction: string;
   description: string;
@@ -57,6 +58,7 @@ interface FlowNode {
   stepNumber?: number;
   condition?: string;
   conditionDescription?: string;
+  subprocessId?: string;
   label?: string;
   endType?: string;
 }
@@ -102,7 +104,6 @@ interface DecisionItemProps {
 
 function DecisionItem({ node, edges, flowNodes, onStepSelect }: DecisionItemProps) {
   const isDecision = node.nodeType === "decision";
-  const isSwitch = node.nodeType === "switch";
 
   // Get outgoing edges to show conditions
   const outgoingEdges = edges?.filter(e => e.fromNodeId === node.nodeId) || [];
@@ -238,7 +239,7 @@ function SubprocessItem({ node, onSubprocessClick, subprocesses }: SubprocessIte
     return (
       <div
         onClick={handleClick}
-        className="border rounded-lg h-full relative cursor-pointer hover:border-primary/50 hover:shadow-sm transition-all group bg-background"
+        className="border rounded-lg h-full relative cursor-pointer group bg-background"
       >
         <div className="flex h-full">
           {/* Left side: Subprocess details */}
@@ -317,6 +318,7 @@ function SubprocessItem({ node, onSubprocessClick, subprocesses }: SubprocessIte
     const [isDetecting, setIsDetecting] = useState(false);
     const [detectError, setDetectError] = useState<string | null>(null);
     const [isDetectingSensitive, setIsDetectingSensitive] = useState(false);
+    // eslint-disable-next-line @typescript-eslint/no-unused-vars
     const [sensitiveError, setSensitiveError] = useState<string | null>(null);
     const [showCroppedElement, setShowCroppedElement] = useState(false);
     const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
@@ -377,17 +379,14 @@ function SubprocessItem({ node, onSubprocessClick, subprocesses }: SubprocessIte
       }
     };
 
-    // Use overlay image if available, otherwise original screenshot
-    const displayImageUrl = step.overlayImageUrl || step.screenshotUrl;
-
     // Check if step has sensitive boxes
     const hasSensitiveBoxes = step.sensitiveInfoBoxes && step.sensitiveInfoBoxes.length > 0;
 
     return (
-      <div id={`step-${step.stepNumber}`} className="border rounded-lg h-full relative">
+      <div id={`step-${step.stepNumber}`} className="border rounded-lg h-full relative overflow-hidden">
         <div className="flex h-full">
           {/* Left side: Step details - takes remaining space */}
-          <div className="flex-1 p-3 min-w-0 flex flex-col">
+          <div className="flex-1 p-3 pr-2 min-w-0 flex flex-col">
             <div className="flex items-start gap-2">
               {/* Step number */}
               <div className="flex-shrink-0 w-7 h-7 rounded-full bg-primary text-primary-foreground flex items-center justify-center font-bold text-xs">
@@ -536,7 +535,7 @@ function SubprocessItem({ node, onSubprocessClick, subprocesses }: SubprocessIte
 
           {/* Right side: Screenshot with preserved aspect ratio */}
           {step.screenshotUrl && (
-            <div className="relative flex-shrink-0 w-[40%] min-w-[200px] max-w-[280px] p-3 overflow-visible flex items-center justify-center">
+            <div className="relative flex-shrink-0 w-[38%] min-w-[180px] max-w-[260px] py-2 pr-3">
               <div
                 onClick={() => onOpenLightbox(step.stepNumber)}
                 className="relative cursor-pointer group aspect-[16/10] bg-muted flex items-center justify-center overflow-hidden ring-1 ring-gray-300 shadow-md rounded-md"
@@ -554,7 +553,7 @@ function SubprocessItem({ node, onSubprocessClick, subprocesses }: SubprocessIte
                   </div>
                 )}
                 {/* Show zoomed element when eye button is active */}
-                {showCroppedElement && step.boundingBox?.found && !step.boundingBox.masked && (() => {
+                {showCroppedElement && step.boundingBox?.found && !step.boundingBox.masked ? (() => {
                   const bb = step.boundingBox;
                   const centerX = (bb.box_2d[1] + bb.box_2d[3]) / 2 / 10;
                   const centerY = (bb.box_2d[0] + bb.box_2d[2]) / 2 / 10;
@@ -562,44 +561,43 @@ function SubprocessItem({ node, onSubprocessClick, subprocesses }: SubprocessIte
                   const boxHeight = (bb.box_2d[2] - bb.box_2d[0]) / 10;
                   const zoomFactor = Math.min(120 / boxWidth, 120 / boxHeight, 12);
                   return (
-                    <div className="absolute inset-0 z-20 overflow-hidden bg-muted">
-                      <div
-                        style={{
-                          position: "absolute",
-                          left: "50%",
-                          top: "50%",
-                          transform: `translate(-${centerX}%, -${centerY}%) scale(${zoomFactor})`,
-                          transformOrigin: `${centerX}% ${centerY}%`,
-                        }}
-                      >
-                        {/* Image with bounding box overlay */}
-                        <div style={{ position: "relative", display: "inline-block" }}>
-                          <img
-                            src={step.screenshotUrl}
-                            alt={`Zoomed element: ${step.uiElement?.elementName || bb.label}`}
-                            style={{ display: "block" }}
-                          />
-                          {/* Bounding box overlay - scales with the image */}
-                          <div
-                            className="absolute pointer-events-none"
-                            style={{
-                              left: `${(bb.box_2d[1] / 1000) * 100}%`,
-                              top: `${(bb.box_2d[0] / 1000) * 100}%`,
-                              width: `${((bb.box_2d[3] - bb.box_2d[1]) / 1000) * 100}%`,
-                              height: `${((bb.box_2d[2] - bb.box_2d[0]) / 1000) * 100}%`,
-                              backgroundColor: "rgba(234, 179, 8, 0.3)",
-                              border: "2px solid #eab308",
-                            }}
-                          />
-                        </div>
+                    <div
+                      style={{
+                        position: "absolute",
+                        left: "50%",
+                        top: "50%",
+                        transform: `translate(-${centerX}%, -${centerY}%) scale(${zoomFactor})`,
+                        transformOrigin: `${centerX}% ${centerY}%`,
+                      }}
+                    >
+                      {/* Image with bounding box overlay */}
+                      <div style={{ position: "relative", display: "inline-block" }}>
+                        {/* eslint-disable-next-line @next/next/no-img-element */}
+                        <img
+                          src={step.screenshotUrl}
+                          alt={`Zoomed element: ${step.uiElement?.elementName || bb.label}`}
+                          style={{ display: "block" }}
+                        />
+                        {/* Bounding box overlay - scales with the image */}
+                        <div
+                          className="absolute pointer-events-none"
+                          style={{
+                            left: `${(bb.box_2d[1] / 1000) * 100}%`,
+                            top: `${(bb.box_2d[0] / 1000) * 100}%`,
+                            width: `${((bb.box_2d[3] - bb.box_2d[1]) / 1000) * 100}%`,
+                            height: `${((bb.box_2d[2] - bb.box_2d[0]) / 1000) * 100}%`,
+                            backgroundColor: bb.masked ? "rgba(220, 38, 38, 0.15)" : "rgba(234, 179, 8, 0.2)",
+                          }}
+                        />
                       </div>
                     </div>
                   );
-                })()}
-                {/* Regular screenshot view */}
-                {!showCroppedElement && (
-                  <div className="relative w-full h-full flex items-center justify-center">
+                })() : (
+                  <>
+                    {/* Container that preserves aspect ratio */}
+                    <div className="relative w-full h-full flex items-center justify-center">
                       {step.overlayImageUrl ? (
+                        // eslint-disable-next-line @next/next/no-img-element
                         <img
                           src={step.overlayImageUrl}
                           alt={`Screenshot for step ${step.stepNumber}`}
@@ -609,6 +607,7 @@ function SubprocessItem({ node, onSubprocessClick, subprocesses }: SubprocessIte
                         />
                       ) : (
                         <div className="relative max-w-full max-h-full">
+                          {/* eslint-disable-next-line @next/next/no-img-element */}
                           <img
                             src={step.screenshotUrl}
                             alt={`Screenshot for step ${step.stepNumber}`}
@@ -652,12 +651,13 @@ function SubprocessItem({ node, onSubprocessClick, subprocesses }: SubprocessIte
                         </div>
                       )}
                     </div>
+                  </>
                 )}
-                {/* Label badges - shown in both views at fixed position */}
+                {/* Label badges - shown at top-left to avoid overlapping with bottom buttons */}
                 {(step.boundingBox?.found || hasSensitiveBoxes) && (
-                  <div className="absolute bottom-3 left-1 z-30 flex gap-1 pointer-events-none">
+                  <div className="absolute top-1 left-1 z-30 flex flex-col gap-1 pointer-events-none max-w-[70%]">
                     {step.boundingBox?.found && (
-                      <div className="text-white text-xs px-2 py-1 rounded font-medium shadow-md bg-green-600">
+                      <div className="text-white text-xs px-2 py-1 rounded font-medium shadow-md bg-green-600 truncate">
                         {step.uiElement?.elementName || step.boundingBox.label}
                       </div>
                     )}
@@ -782,6 +782,7 @@ function SubprocessItem({ node, onSubprocessClick, subprocesses }: SubprocessIte
     3: "w-full mx-auto",
   };
 
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
   export function StepsList({ steps, processId, selectedStepNumber, onStepSelect, flowNodes, flowEdges, subprocesses, onSubprocessClick }: StepsListProps) {
     const [expandedSteps, setExpandedSteps] = useState<Set<number>>(new Set());
     const [allExpanded, setAllExpanded] = useState(false);
@@ -845,7 +846,8 @@ function SubprocessItem({ node, onSubprocessClick, subprocesses }: SubprocessIte
       });
       const mergeNodes = new Set(
         Array.from(incomingEdgeCount.entries())
-          .filter(([_, count]) => count > 1)
+          // eslint-disable-next-line @typescript-eslint/no-unused-vars
+          .filter(([_nodeId, count]) => count > 1)
           .map(([nodeId]) => nodeId)
       );
 

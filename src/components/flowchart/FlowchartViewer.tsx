@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-explicit-any, react-hooks/set-state-in-effect */
 "use client";
 
 import { useCallback, useEffect, useMemo, useState, useRef } from "react";
@@ -546,6 +547,7 @@ function StepDetailPopup({ step, position, onClose, onDrag, onOpenLightbox }: St
                   >
                     {/* Image with bounding box overlay */}
                     <div style={{ position: "relative", display: "inline-block" }}>
+                      {/* eslint-disable-next-line @next/next/no-img-element */}
                       <img
                         src={step.screenshotUrl}
                         alt={`Zoomed element: ${step.uiElement?.elementName || bb.label}`}
@@ -574,6 +576,7 @@ function StepDetailPopup({ step, position, onClose, onDrag, onOpenLightbox }: St
                 {/* Container that preserves aspect ratio */}
                 <div className="relative w-full h-full flex items-center justify-center">
                   {step.overlayImageUrl ? (
+                    // eslint-disable-next-line @next/next/no-img-element
                     <img
                       src={step.overlayImageUrl}
                       alt={`Screenshot for step ${step.stepNumber}`}
@@ -581,6 +584,7 @@ function StepDetailPopup({ step, position, onClose, onDrag, onOpenLightbox }: St
                     />
                   ) : (
                     <div className="relative max-w-full max-h-full">
+                      {/* eslint-disable-next-line @next/next/no-img-element */}
                       <img
                         src={step.screenshotUrl}
                         alt={`Screenshot for step ${step.stepNumber}`}

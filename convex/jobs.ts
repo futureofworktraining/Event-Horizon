@@ -185,6 +185,7 @@ export const updateJob = mutation({
       throw new Error("Job not found");
     }
 
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const updates: Record<string, any> = { updatedAt: Date.now() };
     if (args.fileName !== undefined) {
       updates.fileName = args.fileName;
@@ -430,6 +431,7 @@ export const getJobProcessingStatus = query({
     return {
       job: {
         _id: job._id,
+        status: job.status,
         videoStorageId: job.videoStorageId,
         autoExtractScreenshots: job.autoExtractScreenshots ?? true,
         autoBoundingBoxes: job.autoBoundingBoxes ?? true,

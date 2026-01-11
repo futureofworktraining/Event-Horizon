@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
 "use client";
 
 import { useState } from "react";
@@ -23,12 +24,25 @@ import {
 import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
 
+export interface ExportStartParams {
+  format: "word" | "pdf" | "json";
+  filename: string;
+}
+
+export interface ExportResultParams {
+  success: boolean;
+  error?: string;
+  exportId?: string;
+}
+
 interface ExportDialogProps {
   processId: Id<"processes">;
   processName: string;
   processData: any;
   isOpen: boolean;
   onClose: () => void;
+  onExportStart?: (params: ExportStartParams) => string;
+  onExportComplete?: (params: ExportResultParams) => void;
 }
 
 type ExportFormat = "json" | "word" | "pdf";
@@ -53,19 +67,28 @@ export function ExportDialog({
   processData,
   isOpen,
   onClose,
+  onExportStart,
+  onExportComplete,
 }: ExportDialogProps) {
   const defaultFilename = sanitizeFilename(processName) + "_pdd";
   const [format, setFormat] = useState<ExportFormat>("word");
   const [filename, setFilename] = useState(defaultFilename);
-  const [isExporting, setIsExporting] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
   const generateWordPDD = useAction(api.exportPdd.generateWordPDD);
   const generatePdfPDD = useAction(api.exportPdd.generatePdfPDD);
 
   const handleExport = async () => {
-    setIsExporting(true);
     setError(null);
+    let exportId = "";
+
+    // For Word/PDF, close dialog immediately and show progress toast
+    if (format !== "json") {
+      if (onExportStart) {
+        exportId = onExportStart({ format: format as "word" | "pdf", filename });
+      }
+      onClose();
+    }
 
     try {
       if (format === "json") {
@@ -157,13 +180,17 @@ export function ExportDialog({
           const a = document.createElement("a");
           a.href = downloadUrl;
           a.download = `${filename}.docx`;
+          a.style.display = "none";
           document.body.appendChild(a);
           a.click();
-          document.body.removeChild(a);
-          URL.revokeObjectURL(downloadUrl);
-          onClose();
+          // Give browser time to start the download before cleanup
+          setTimeout(() => {
+            document.body.removeChild(a);
+            URL.revokeObjectURL(downloadUrl);
+          }, 100);
+          onExportComplete?.({ success: true, exportId });
         } else {
-          setError(result.error || "Failed to generate Word document");
+          onExportComplete?.({ success: false, error: result.error || "Failed to generate Word document", exportId });
         }
       } else if (format === "pdf") {
         const result = await generatePdfPDD({ processId, customFileName: filename });
@@ -176,19 +203,26 @@ export function ExportDialog({
           const a = document.createElement("a");
           a.href = downloadUrl;
           a.download = `${filename}.pdf`;
+          a.style.display = "none";
           document.body.appendChild(a);
           a.click();
-          document.body.removeChild(a);
-          URL.revokeObjectURL(downloadUrl);
-          onClose();
+          // Give browser time to start the download before cleanup
+          setTimeout(() => {
+            document.body.removeChild(a);
+            URL.revokeObjectURL(downloadUrl);
+          }, 100);
+          onExportComplete?.({ success: true, exportId });
         } else {
-          setError(result.error || "Failed to generate PDF document");
+          onExportComplete?.({ success: false, error: result.error || "Failed to generate PDF document", exportId });
         }
       }
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Export failed");
-    } finally {
-      setIsExporting(false);
+      const errorMessage = err instanceof Error ? err.message : "Export failed";
+      if (format === "json") {
+        setError(errorMessage);
+      } else {
+        onExportComplete?.({ success: false, error: errorMessage, exportId });
+      }
     }
   };
 
@@ -286,53 +320,25 @@ export function ExportDialog({
         </div>
 
         <DialogFooter className="gap-3">
-          <Button variant="outline" onClick={onClose} disabled={isExporting}>
+          <Button type="button" variant="outline" onClick={onClose}>
             Cancel
           </Button>
-          <Button onClick={handleExport} disabled={isExporting}>
-            {isExporting ? (
-              <>
-                <svg
-                  className="mr-2 h-4 w-4 animate-spin"
-                  xmlns="http://www.w3.org/2000/svg"
-                  fill="none"
-                  viewBox="0 0 24 24"
-                >
-                  <circle
-                    className="opacity-25"
-                    cx="12"
-                    cy="12"
-                    r="10"
-                    stroke="currentColor"
-                    strokeWidth="4"
-                  />
-                  <path
-                    className="opacity-75"
-                    fill="currentColor"
-                    d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
-                  />
-                </svg>
-                Generating...
-              </>
-            ) : (
-              <>
-                <svg
-                  xmlns="http://www.w3.org/2000/svg"
-                  viewBox="0 0 24 24"
-                  fill="none"
-                  stroke="currentColor"
-                  strokeWidth="2"
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                  className="mr-2 h-4 w-4"
-                >
-                  <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
-                  <polyline points="7 10 12 15 17 10" />
-                  <line x1="12" x2="12" y1="15" y2="3" />
-                </svg>
-                Export
-              </>
-            )}
+          <Button type="button" onClick={handleExport}>
+            <svg
+              xmlns="http://www.w3.org/2000/svg"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              strokeWidth="2"
+              strokeLinecap="round"
+              strokeLinejoin="round"
+              className="mr-2 h-4 w-4"
+            >
+              <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
+              <polyline points="7 10 12 15 17 10" />
+              <line x1="12" x2="12" y1="15" y2="3" />
+            </svg>
+            Export
           </Button>
         </DialogFooter>
       </DialogContent>

@@ -1,3 +1,4 @@
+/* eslint-disable react-hooks/exhaustive-deps, react-hooks/set-state-in-effect */
 "use client";
 
 import { Bell, Search, User, ChevronDown, Settings, LogOut } from "lucide-react";

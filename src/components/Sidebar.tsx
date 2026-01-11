@@ -35,7 +35,7 @@ function NavItem({ href, icon, label, isActive, isCollapsed, badge }: NavItemPro
         "flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-all duration-200",
         isActive
           ? "bg-background text-foreground border-2 border-foreground shadow-[2px_2px_0px_0px_var(--foreground)] font-bold"
-          : "text-muted-foreground hover:text-foreground hover:bg-muted font-medium hover:translate-x-1 transition-transform",
+          : "text-muted-foreground hover:text-foreground hover:bg-muted font-medium hover:translate-x-1 transition-transform border-2 border-transparent",
         isCollapsed && "justify-center px-2"
       )}
       title={isCollapsed ? label : undefined}
@@ -70,7 +70,7 @@ interface NavSectionProps {
 
 function NavSection({ title, children, isCollapsed }: NavSectionProps) {
   return (
-    <div className="space-y-1">
+    <div className="space-y-2">
       {title && !isCollapsed && (
         <h3 className="px-3 text-xs font-semibold text-muted-foreground/70 uppercase tracking-wider mb-2">
           {title}
@@ -103,25 +103,45 @@ export function Sidebar() {
       )}
     >
       {/* Logo Section */}
-      <div className={cn("border-b border-border/50 flex flex-shrink-0 items-center justify-start", isCollapsed ? "h-14 p-3" : "h-14 px-6")}>
-        <Link href="/" className="flex items-center gap-3">
+      <div className={cn(
+        "flex flex-shrink-0 items-center justify-start transition-all duration-300",
+        isCollapsed ? "h-20 p-3 justify-center" : "h-20 px-6"
+      )}>
+        <Link href="/" className="flex items-center gap-3 group">
           <div className={cn(
-            "rounded-xl bg-primary flex items-center justify-center border-2 border-foreground shadow-[4px_4px_0px_0px_rgba(0,0,0,1)] flex-shrink-0",
-            isCollapsed ? "w-10 h-10" : "w-10 h-10"
+            "relative rounded-2xl flex items-center justify-center flex-shrink-0 transition-all duration-500 group-hover:scale-105 group-hover:rotate-3",
+            "bg-gradient-to-br from-zinc-900 via-zinc-800 to-zinc-950 dark:from-white dark:via-zinc-100 dark:to-zinc-200",
+            "shadow-[0_8px_30px_rgb(0,0,0,0.12)] dark:shadow-[0_8px_30px_rgb(255,255,255,0.08)]",
+            "border border-white/10 dark:border-black/5",
+            isCollapsed ? "w-11 h-11" : "w-11 h-11"
           )}>
-            <Layers className="w-5 h-5 text-primary-foreground" />
+            {/* Glossy overlay */}
+            <div className="absolute inset-0 rounded-2xl bg-gradient-to-tr from-white/10 to-transparent pointer-events-none" />
+
+            <Layers className="w-6 h-6 text-white dark:text-black z-10" />
+
+            {/* Subtle glow on hover */}
+            <div className="absolute -inset-1 bg-primary/20 rounded-2xl blur-xl opacity-0 group-hover:opacity-100 transition-opacity duration-500" />
           </div>
+
           {!isCollapsed && (
             <div className="flex flex-col overflow-hidden">
-              <span className="text-lg font-bold tracking-tight whitespace-nowrap">Event Horizon</span>
-              <span className="text-xs text-muted-foreground font-medium whitespace-nowrap">AI Process Studio</span>
+              <span className="text-xl font-black tracking-tight whitespace-nowrap bg-clip-text text-transparent bg-gradient-to-r from-zinc-900 to-zinc-500 dark:from-white dark:to-zinc-400">
+                Event Horizon
+              </span>
+              <div className="flex items-center gap-1.5">
+                <span className="h-px w-3 bg-primary/30" />
+                <span className="text-[10px] uppercase tracking-widest text-muted-foreground font-bold whitespace-nowrap">
+                  AI Process Studio
+                </span>
+              </div>
             </div>
           )}
         </Link>
       </div>
 
       {/* Navigation */}
-      <nav className={cn("flex-1 space-y-6 overflow-y-auto", isCollapsed ? "p-2" : "p-4")}>
+      <nav className={cn("flex-1 space-y-6 overflow-y-auto", isCollapsed ? "p-2" : "px-3 py-4")}>
         <NavSection isCollapsed={isCollapsed}>
           <NavItem
             href="/"
@@ -168,7 +188,7 @@ export function Sidebar() {
       </nav>
 
       {/* Footer */}
-      <div className={cn("space-y-1", isCollapsed ? "p-2" : "p-4")}>
+      <div className={cn("space-y-2", isCollapsed ? "p-2" : "px-3 py-4")}>
         <NavItem
           href="/settings"
           icon={<Settings className="w-5 h-5" />}
@@ -186,7 +206,7 @@ export function Sidebar() {
       </div>
 
       {/* Collapse Toggle & Version */}
-      <div className={cn("border-t border-border/50 bg-muted/30", isCollapsed ? "p-2" : "px-4 py-3")}>
+      <div className={cn("border-t border-border/50 bg-muted/30", isCollapsed ? "p-2" : "px-6 py-3")}>
         <div className={cn("flex items-center", isCollapsed ? "justify-center" : "justify-between")}>
           {!isCollapsed && (
             <p className="text-xs text-muted-foreground">

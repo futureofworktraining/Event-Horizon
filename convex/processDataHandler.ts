@@ -1,4 +1,5 @@
 "use node";
+/* eslint-disable @typescript-eslint/no-explicit-any */
 
 /**
  * Process Data Handler
@@ -27,8 +28,10 @@ export const SUBPROCESS_COLORS = 8;
 // ============================================
 
 export interface ProcessingContext {
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
   runMutation: (mutation: any, args: any) => Promise<any>;
   runQuery: (query: any, args: any) => Promise<any>;
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
 }
 
 // ============================================

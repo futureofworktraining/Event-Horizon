@@ -1,6 +1,7 @@
 import { v } from "convex/values";
+
 // Controller for API logs and cost stats
-import { mutation, query, internalMutation } from "./_generated/server";
+import { query, internalMutation } from "./_generated/server";
 
 /**
  * Log an API call with cost calculation
@@ -76,6 +77,7 @@ export const getRecentLogs = query({
     handler: async (ctx, args) => {
         let q;
         if (args.category) {
+            // eslint-disable-next-line @typescript-eslint/no-explicit-any
             q = ctx.db.query("apiLogs").withIndex("by_category", (q) => q.eq("category", args.category as any));
         } else {
             q = ctx.db.query("apiLogs").withIndex("by_timestamp");

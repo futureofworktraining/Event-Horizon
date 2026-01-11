@@ -6,6 +6,8 @@ import { SidebarProvider } from "@/components/SidebarContext";
 import { Sidebar } from "@/components/Sidebar";
 import { Header } from "@/components/Header";
 import { Toaster } from "@/components/ui/sonner";
+import { ExportProvider } from "@/contexts/ExportContext";
+import { ExportProgressToast } from "@/components/pdd/ExportProgressToast";
 
 const geistSans = Geist({
   variable: "--font-geist-sans",
@@ -37,21 +39,26 @@ export default function RootLayout({
     <html lang="en" suppressHydrationWarning>
       <body
         className={`${geistSans.variable} ${geistMono.variable} ${plusJakarta.variable} font-sans antialiased`}
+        suppressHydrationWarning
       >
         <ConvexClientProvider>
-          <SidebarProvider>
-            <div className="min-h-screen flex items-stretch">
-              {/* Sidebar */}
-              <Sidebar />
+          <ExportProvider>
+            <SidebarProvider>
+              <div className="min-h-screen flex items-stretch">
+                {/* Sidebar */}
+                <Sidebar />
 
-              {/* Main content area */}
-              <div className="flex-1 flex flex-col min-h-screen">
-                <Header />
-                <main className="flex-1 bg-dot-pattern overflow-auto">{children}</main>
+                {/* Main content area */}
+                <div className="flex-1 flex flex-col min-h-screen">
+                  <Header />
+                  <main className="flex-1 bg-dot-pattern overflow-auto">{children}</main>
+                </div>
               </div>
-            </div>
-          </SidebarProvider>
-          <Toaster />
+            </SidebarProvider>
+            <Toaster />
+            {/* Global export progress toast - persists across navigation */}
+            <ExportProgressToast />
+          </ExportProvider>
         </ConvexClientProvider>
       </body>
     </html>

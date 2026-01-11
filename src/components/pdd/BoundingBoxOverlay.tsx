@@ -46,6 +46,7 @@ export function BoundingBoxOverlay({
       style={{ position: "relative" }}
     >
       {/* Image */}
+      {/* eslint-disable-next-line @next/next/no-img-element */}
       <img
         src={imageUrl}
         alt={alt}

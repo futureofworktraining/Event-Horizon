@@ -1,9 +1,11 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
 "use client";
 
-import { useState } from "react";
+import { useState, useCallback } from "react";
 import { useQuery } from "convex/react";
 import { Button } from "@/components/ui/button";
-import { ExportDialog } from "./ExportDialog";
+import { ExportDialog, ExportStartParams, ExportResultParams } from "./ExportDialog";
+import { useExport } from "@/contexts/ExportContext";
 import { api } from "../../../convex/_generated/api";
 import { Id } from "../../../convex/_generated/dataModel";
 import { Loader2 } from "lucide-react";
@@ -16,6 +18,7 @@ interface ExportButtonProps {
 
 export function ExportButton({ processData, processName, jobId }: ExportButtonProps) {
   const [isDialogOpen, setIsDialogOpen] = useState(false);
+  const { startExport, setDownloading, completeExport, failExport } = useExport();
 
   const processingStatus = useQuery(
     api.jobs.getJobProcessingStatus,
@@ -23,11 +26,46 @@ export function ExportButton({ processData, processName, jobId }: ExportButtonPr
   );
 
   // Check if auto-detection is still in progress
-  // We check for bounding boxes specifically as requested, but also screenshots if they are needed for bounding boxes
   const isDetectionPending = processingStatus && processingStatus.job.autoBoundingBoxes && (
     processingStatus.totals.totalBoundingBoxesNeeded > 0 ||
     (processingStatus.job.autoExtractScreenshots && processingStatus.totals.totalScreenshotsNeeded > 0)
   );
+
+  const handleExportStart = useCallback((params: ExportStartParams) => {
+    // Calculate total steps including all subprocesses
+    let stepCount = processData?.totalStepsAllProcesses || 0;
+
+    // If totalStepsAllProcesses not available, calculate from available data
+    if (!stepCount) {
+      // Main process steps
+      stepCount = processData?.steps?.length || processData?.totalSteps || 0;
+
+      // Add subprocess steps if available
+      if (processData?.subprocesses && Array.isArray(processData.subprocesses)) {
+        for (const subprocess of processData.subprocesses) {
+          stepCount += subprocess.totalSteps || 0;
+        }
+      }
+    }
+
+    // Return the exportId to the dialog so it can be passed back upon completion
+    return startExport(params.format, params.filename, stepCount);
+  }, [startExport, processData]);
+
+  const handleExportComplete = useCallback((params: ExportResultParams & { exportId?: string }) => {
+    // We expect an exportId for concurrent tracking
+    if (!params.exportId) return;
+
+    if (params.success) {
+      setDownloading(params.exportId);
+      // Small delay to show downloading state, then complete
+      setTimeout(() => {
+        completeExport(params.exportId!);
+      }, 500);
+    } else {
+      failExport(params.exportId, params.error || "Export failed");
+    }
+  }, [setDownloading, completeExport, failExport]);
 
   return (
     <>
@@ -64,6 +102,8 @@ export function ExportButton({ processData, processName, jobId }: ExportButtonPr
         processData={processData}
         isOpen={isDialogOpen}
         onClose={() => setIsDialogOpen(false)}
+        onExportStart={handleExportStart}
+        onExportComplete={handleExportComplete}
       />
     </>
   );

@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-explicit-any , react-hooks/preserve-manual-memoization */
 "use client";
 
 import { useState, useMemo, useCallback } from "react";

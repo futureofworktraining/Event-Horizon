@@ -52,7 +52,7 @@ export function ScreenshotExtractor({ processId, videoStorageId }: ScreenshotExt
             // Upload the frame
             const response = await fetch(uploadUrl, {
               method: "POST",
-              headers: { "Content-Type": "image/jpeg" },
+              headers: { "Content-Type": "image/png" },
               body: frame.blob,
             });
 

@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
 "use client";
 
 import { useState, useEffect, useRef } from "react";
@@ -1123,7 +1124,7 @@ export function AnalysisPromptEditor({ jobId, processId, onSave }: AnalysisPromp
                   <li>Use a different Gemini model (Pro for complex reasoning, Flash for speed)</li>
                   <li>Process video, images, text, or output from previous steps</li>
                   <li>Define custom prompts and output schemas</li>
-                  <li>Enable "thinking" mode with adjustable effort (Gemini 3)</li>
+                  <li>Enable &quot;thinking&quot; mode with adjustable effort (Gemini 3)</li>
                 </ul>
                 <p className="pt-2">Create a workflow to customize how videos are analyzed, then test it on different processes.</p>
               </div>

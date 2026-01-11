@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
 import { query, mutation, internalMutation } from "./_generated/server";
 import { v } from "convex/values";
 import { flowNodeValidator, flowEdgeValidator } from "./schema";
@@ -69,6 +70,16 @@ export const getProcessWithFlow = query({
       .withIndex("by_parent", (q) => q.eq("parentProcessId", args.processId))
       .collect();
 
+    // Calculate total steps including all subprocesses
+    let totalStepsAllProcesses = steps.length;
+    for (const subprocess of subprocesses) {
+      const subSteps = await ctx.db
+        .query("steps")
+        .withIndex("by_process", (q) => q.eq("processId", subprocess._id))
+        .collect();
+      totalStepsAllProcesses += subSteps.length;
+    }
+
     // Get job info
     const job = await ctx.db.get(process.jobId);
 
@@ -78,6 +89,7 @@ export const getProcessWithFlow = query({
       steps: stepsWithScreenshots,
       subprocesses,
       job,
+      totalStepsAllProcesses,
     };
   },
 });
@@ -96,6 +108,7 @@ export const getProcessesForJob = query({
     const topLevelProcesses = allProcesses.filter(p => !p.parentProcessId);
 
     // Build hierarchy
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const buildHierarchy = async (parentId: string | null): Promise<any[]> => {
       const children = allProcesses.filter(p =>
         parentId ? p.parentProcessId?.toString() === parentId : !p.parentProcessId

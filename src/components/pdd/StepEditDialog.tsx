@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
 "use client";
 
 import { useState, useEffect, useRef, useCallback } from "react";
@@ -59,7 +60,7 @@ interface StepData {
   _id: string;
   stepNumber: number;
   timestamp: string;
-  timestampSeconds: number;
+  timestampSeconds?: number;
   actionType: string;
   specificAction: string;
   description: string;
@@ -148,7 +149,7 @@ export function StepEditDialog({
   // Video capture state
   const videoRef = useRef<HTMLVideoElement>(null);
   const canvasRef = useRef<HTMLCanvasElement>(null);
-  const [videoTime, setVideoTime] = useState(step.timestampSeconds);
+  const [videoTime, setVideoTime] = useState(step.timestampSeconds ?? 0);
   const [isPlaying, setIsPlaying] = useState(false);
 
   // Queries and mutations
@@ -205,7 +206,7 @@ export function StepEditDialog({
     setFormData(prev => ({
       ...prev,
       actionType: newActionType,
-      specificAction: newValidActions.includes(prev.specificAction as any) ? prev.specificAction : newValidActions[0] || "",
+      specificAction: (newValidActions as readonly string[]).includes(prev.specificAction) ? prev.specificAction : newValidActions[0] || "",
     }));
   };
 
@@ -383,7 +384,7 @@ export function StepEditDialog({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-6xl max-h-[90vh] overflow-hidden flex flex-col">
+      <DialogContent className="sm:max-w-3xl max-h-[90vh] overflow-hidden flex flex-col">
         <DialogHeader>
           <DialogTitle>Edit Step {step.stepNumber}</DialogTitle>
         </DialogHeader>
@@ -690,10 +691,11 @@ export function StepEditDialog({
               {step.screenshotUrl && (
                 <div className="mb-4">
                   <label className="text-sm font-medium mb-2 block">Current Screenshot</label>
+                  {/* eslint-disable-next-line @next/next/no-img-element */}
                   <img
                     src={step.screenshotUrl}
                     alt="Current screenshot"
-                    className="max-h-48 rounded-md border object-contain"
+                    className="max-h-96 rounded-md border object-contain"
                   />
                 </div>
               )}
@@ -792,18 +794,19 @@ export function StepEditDialog({
                   videoRef={videoRef}
                   canvasRef={canvasRef}
                   videoUrl={videoInfo.videoUrl}
-                  duration={videoInfo.recordingDurationSeconds}
+                  duration={videoInfo.recordingDurationSeconds ?? 0}
                   currentTime={videoTime}
                   isPlaying={isPlaying}
                   onTimeChange={setVideoTime}
                   onPlayingChange={setIsPlaying}
-                  initialTime={step.timestampSeconds}
+                  mode="expanded"
+                  initialTime={step.timestampSeconds ?? 0}
                   onCapture={captureVideoFrame}
                   isCapturing={isUploading}
                   onGoToStepTime={() => {
                     if (videoRef.current) {
-                      videoRef.current.currentTime = step.timestampSeconds;
-                      setVideoTime(step.timestampSeconds);
+                      videoRef.current.currentTime = step.timestampSeconds ?? 0;
+                      setVideoTime(step.timestampSeconds ?? 0);
                     }
                   }}
                   showGoToStepTime

@@ -1,4 +1,5 @@
 "use node";
+/* eslint-disable @typescript-eslint/no-explicit-any */
 
 import { v } from "convex/values";
 import { action } from "./_generated/server";
@@ -23,8 +24,9 @@ import {
   ShadingType,
   ITableCellOptions,
 } from "docx";
-import PDFDocument from "pdfkit";
-import { Jimp } from "jimp";
+import { PDFDocument, StandardFonts, rgb, PDFFont, PDFPage } from "pdf-lib";
+import { Jimp, loadFont, measureText, measureTextHeight } from "jimp";
+import * as path from "path";
 
 // ============================================
 // TYPES
@@ -69,13 +71,13 @@ async function fetchImageAsBuffer(url: string): Promise<Buffer | null> {
   }
 }
 
-// Draw bounding box on image
+// Draw bounding box on image (border only)
 async function drawBoundingBox(
   image: Awaited<ReturnType<typeof Jimp.read>>,
   box: number[],
   color: number,
   strokeWidth: number = 3,
-  label?: string
+  _label?: string // Label rendering removed due to Jimp v1.x API changes
 ): Promise<void> {
   const [ymin, xmin, ymax, xmax] = box;
   const width = image.width;
@@ -87,90 +89,219 @@ async function drawBoundingBox(
   const boxWidth = Math.round(((xmax - xmin) / 1000) * width);
   const boxHeight = Math.round(((ymax - ymin) / 1000) * height);
 
-  // Draw border
-  for (let i = 0; i < strokeWidth; i++) {
-    // Top border
-    for (let x = boxX; x < boxX + boxWidth && x < width; x++) {
-      if (boxY + i >= 0 && boxY + i < height && x >= 0) {
-        image.setPixelColor(color, x, boxY + i);
-      }
-    }
-    // Bottom border
-    for (let x = boxX; x < boxX + boxWidth && x < width; x++) {
-      if (boxY + boxHeight - 1 - i >= 0 && boxY + boxHeight - 1 - i < height && x >= 0) {
-        image.setPixelColor(color, x, boxY + boxHeight - 1 - i);
-      }
-    }
-    // Left border
-    for (let y = boxY; y < boxY + boxHeight && y < height; y++) {
-      if (boxX + i >= 0 && boxX + i < width && y >= 0) {
-        image.setPixelColor(color, boxX + i, y);
-      }
-    }
-    // Right border
-    for (let y = boxY; y < boxY + boxHeight && y < height; y++) {
-      if (boxX + boxWidth - 1 - i >= 0 && boxX + boxWidth - 1 - i < width && y >= 0) {
-        image.setPixelColor(color, boxX + boxWidth - 1 - i, y);
-      }
-    }
-  }
+  // Helper to safely scan region
+  const safeScan = (x: number, y: number, w: number, h: number) => {
+    // Clip to image bounds
+    const startX = Math.max(0, x);
+    const startY = Math.max(0, y);
+    const endX = Math.min(width, x + w);
+    const endY = Math.min(height, y + h);
+    const scanW = endX - startX;
+    const scanH = endY - startY;
 
-  // Draw label background if provided
-  if (label) {
-    const labelHeight = 20;
-    const labelY = Math.max(0, boxY - labelHeight - 2);
-    const labelWidth = Math.min(label.length * 8 + 10, boxWidth);
+    if (scanW <= 0 || scanH <= 0) return;
 
-    // Draw label background
-    for (let y = labelY; y < labelY + labelHeight && y < height; y++) {
-      for (let x = boxX; x < boxX + labelWidth && x < width; x++) {
-        if (x >= 0 && y >= 0) {
-          image.setPixelColor(color, x, y);
-        }
-      }
-    }
-  }
+    image.scan(startX, startY, scanW, scanH, (px, py, idx) => {
+      const r = (color >>> 24) & 0xff;
+      const g = (color >>> 16) & 0xff;
+      const b = (color >>> 8) & 0xff;
+      const a = color & 0xff;
+      image.bitmap.data[idx + 0] = r;
+      image.bitmap.data[idx + 1] = g;
+      image.bitmap.data[idx + 2] = b;
+      image.bitmap.data[idx + 3] = a;
+    });
+  };
+
+  // Top border
+  safeScan(boxX, boxY, boxWidth, strokeWidth);
+  // Bottom border
+  safeScan(boxX, boxY + boxHeight - strokeWidth, boxWidth, strokeWidth);
+  // Left border
+  safeScan(boxX, boxY, strokeWidth, boxHeight);
+  // Right border
+  safeScan(boxX + boxWidth - strokeWidth, boxY, strokeWidth, boxHeight);
+
+  // Note: Label text rendering removed due to Jimp v1.x API changes
+  // The colored bounding box border provides sufficient visual indication
 }
 
-// Create overview image with all bounding boxes
+// Draw solid filled rectangle for sensitive info masking
+async function drawSensitiveBox(
+  image: Awaited<ReturnType<typeof Jimp.read>>,
+  box: number[],
+  color: number,
+  _label?: string // Label rendering removed due to Jimp v1.x API changes
+): Promise<void> {
+  const [ymin, xmin, ymax, xmax] = box;
+  const imgWidth = image.width;
+  const imgHeight = image.height;
+
+  // Convert normalized coordinates (0-1000) to pixels
+  const boxX = Math.max(0, Math.round((xmin / 1000) * imgWidth));
+  const boxY = Math.max(0, Math.round((ymin / 1000) * imgHeight));
+  const boxEndX = Math.min(imgWidth, Math.round((xmax / 1000) * imgWidth));
+  const boxEndY = Math.min(imgHeight, Math.round((ymax / 1000) * imgHeight));
+  const w = boxEndX - boxX;
+  const h = boxEndY - boxY;
+
+  if (w <= 0 || h <= 0) return;
+
+  console.log(`Drawing sensitive box: x=${boxX}-${boxEndX}, y=${boxY}-${boxEndY}, label=${_label}`);
+
+  // Use scan for faster and more reliable pixel manipulation
+  image.scan(boxX, boxY, w, h, (x, y, idx) => {
+    // Determine RGBA from the color integer
+    // Jimp color is 0xRRGGBBAA
+    const r = (color >>> 24) & 0xff;
+    const g = (color >>> 16) & 0xff;
+    const b = (color >>> 8) & 0xff;
+    const a = color & 0xff;
+
+    image.bitmap.data[idx + 0] = r;
+    image.bitmap.data[idx + 1] = g;
+    image.bitmap.data[idx + 2] = b;
+    image.bitmap.data[idx + 3] = a;
+  });
+
+  // Note: Label text rendering removed due to Jimp v1.x API changes
+  // The solid red fill clearly indicates masked sensitive data
+}
+
+// Helper to draw a text label badge on the image
+async function drawLabelBadge(
+  image: Awaited<ReturnType<typeof Jimp.read>>,
+  font: Awaited<ReturnType<typeof loadFont>>,
+  text: string,
+  x: number,
+  y: number,
+  bgColor: number, // RGBA color for background
+  padding: number = 6
+): Promise<{ width: number; height: number }> {
+  const textWidth = measureText(font, text);
+  const textHeight = measureTextHeight(font, text, 9999); // maxWidth doesn't matter for single-line text
+
+  const badgeWidth = textWidth + padding * 2;
+  const badgeHeight = textHeight + padding * 2;
+
+  // Draw background rectangle
+  const endX = Math.min(image.width, x + badgeWidth);
+  const endY = Math.min(image.height, y + badgeHeight);
+
+  image.scan(x, y, endX - x, endY - y, (px, py, idx) => {
+    const r = (bgColor >>> 24) & 0xff;
+    const g = (bgColor >>> 16) & 0xff;
+    const b = (bgColor >>> 8) & 0xff;
+    const a = bgColor & 0xff;
+    image.bitmap.data[idx + 0] = r;
+    image.bitmap.data[idx + 1] = g;
+    image.bitmap.data[idx + 2] = b;
+    image.bitmap.data[idx + 3] = a;
+  });
+
+  // Draw text
+  image.print({ font, x: x + padding, y: y + padding, text });
+
+  return { width: badgeWidth, height: badgeHeight };
+}
+
+// Create overview image with all bounding boxes and text labels
+// Returns high quality PNG image for Word document (lossless)
 async function createOverviewImage(
   screenshotBuffer: Buffer,
   boundingBox?: BoundingBox,
   sensitiveBoxes?: SensitiveInfoBox[],
-  maxWidth: number = 550
+  uiElementLabel?: string
 ): Promise<Buffer> {
   const image = await Jimp.read(screenshotBuffer);
 
-  // Draw main bounding box (green)
+  console.log(`Creating overview image: ${image.width}x${image.height}`);
+  console.log(`Sensitive boxes count: ${sensitiveBoxes?.length || 0}`);
+
+  // Draw sensitive info boxes FIRST (solid red fill to mask data)
+  // NOTE: We don't check 'found' flag because frontend also renders without checking it
+  // and manually added boxes always have found=true anyway
+  if (sensitiveBoxes?.length) {
+    const redColor = 0xdc2626ff; // Solid red with full alpha (RGBA)
+    for (const box of sensitiveBoxes) {
+      console.log(`Processing sensitive box: label=${box.label}, box_2d=${JSON.stringify(box.box_2d)}, found=${box.found}`);
+      if (box.box_2d?.length === 4) {
+        // Validate coordinates are within range
+        const [ymin, xmin, ymax, xmax] = box.box_2d;
+        if (ymin >= 0 && xmin >= 0 && ymax <= 1000 && xmax <= 1000 && ymin < ymax && xmin < xmax) {
+          console.log(`Drawing sensitive box at: ymin=${ymin}, xmin=${xmin}, ymax=${ymax}, xmax=${xmax}`);
+          await drawSensitiveBox(image, box.box_2d, redColor, box.label);
+        } else {
+          console.warn(`Invalid sensitive box coordinates: ${JSON.stringify(box.box_2d)}`);
+        }
+      }
+    }
+  }
+
+  // Draw main bounding box (green) AFTER sensitive boxes so it's visible
   if (boundingBox?.found && boundingBox.box_2d?.length === 4) {
     const greenColor = 0x22c55eff; // Green with full alpha
     await drawBoundingBox(image, boundingBox.box_2d, greenColor, 4, boundingBox.label);
   }
 
-  // Draw sensitive info boxes (red)
-  if (sensitiveBoxes?.length) {
-    const redColor = 0xef4444ff; // Red with full alpha
-    for (const box of sensitiveBoxes) {
-      if (box.found && box.box_2d?.length === 4) {
-        await drawBoundingBox(image, box.box_2d, redColor, 3, box.label);
+  // Draw text label badges at top-left corner (like in web UI)
+  const hasSensitiveData = (sensitiveBoxes && sensitiveBoxes.length > 0) || boundingBox?.masked;
+  const showUiLabel = uiElementLabel && boundingBox?.found;
+
+  if (showUiLabel || hasSensitiveData) {
+    try {
+      // Load font for labels - use 16pt white for visibility
+      const fontPath = path.join(
+        path.dirname(require.resolve("@jimp/plugin-print")),
+        "..", "fonts", "open-sans", "open-sans-16-white", "open-sans-16-white.fnt"
+      );
+      const font = await loadFont(fontPath);
+
+      let currentY = 10; // Start 10px from top
+      const labelX = 10; // Start 10px from left
+      const labelGap = 6; // Gap between labels
+
+      // UI Element label (green badge)
+      if (showUiLabel && uiElementLabel) {
+        const greenBg = 0x22c55eff; // Green background
+        const { height } = await drawLabelBadge(image, font, uiElementLabel, labelX, currentY, greenBg);
+        currentY += height + labelGap;
       }
+
+      // Sensitive data label (red badge)
+      if (hasSensitiveData) {
+        const redBg = 0xdc2626ff; // Red background
+        // Collect sensitive labels or use generic text
+        let sensitiveText = "Sensitive";
+        if (sensitiveBoxes && sensitiveBoxes.length > 0) {
+          const labels = sensitiveBoxes
+            .filter(box => box.found && box.label)
+            .map(box => box.label)
+            .slice(0, 3); // Limit to 3 labels to avoid overflow
+          if (labels.length > 0) {
+            sensitiveText = labels.join(", ");
+            if (sensitiveBoxes.length > 3) {
+              sensitiveText += "...";
+            }
+          }
+        }
+        await drawLabelBadge(image, font, sensitiveText, labelX, currentY, redBg);
+      }
+    } catch (fontError) {
+      console.warn("Could not load font for labels:", fontError);
+      // Continue without labels if font loading fails
     }
   }
 
-  // Resize if needed
-  if (image.width > maxWidth) {
-    const scale = maxWidth / image.width;
-    image.resize({ w: maxWidth, h: Math.round(image.height * scale) });
-  }
-
-  return await image.getBuffer("image/jpeg", { quality: 90 });
+  // Return as PNG for lossless quality in Word document
+  return await image.getBuffer("image/png");
 }
 
 // Create zoomed-in cropped image of the UI element
+// Note: We don't resize to preserve quality - Word will handle display sizing
 async function createZoomInImage(
   screenshotBuffer: Buffer,
-  boundingBox: BoundingBox,
-  maxWidth: number = 400
+  boundingBox: BoundingBox
 ): Promise<Buffer | null> {
   if (!boundingBox?.found || !boundingBox.box_2d || boundingBox.box_2d.length !== 4) {
     return null;
@@ -218,20 +349,16 @@ async function createZoomInImage(
     }
   }
 
-  // Resize if needed
-  if (image.width > maxWidth) {
-    const scale = maxWidth / image.width;
-    image.resize({ w: maxWidth, h: Math.round(image.height * scale) });
-  }
-
-  return await image.getBuffer("image/jpeg", { quality: 90 });
+  // Return as PNG for lossless quality
+  return await image.getBuffer("image/png");
 }
 
 // Process step screenshots - returns overview and zoom-in images
 async function processStepImages(
   screenshotUrl: string | null,
   boundingBox?: BoundingBox,
-  sensitiveBoxes?: SensitiveInfoBox[]
+  sensitiveBoxes?: SensitiveInfoBox[],
+  uiElementLabel?: string
 ): Promise<StepImages> {
   const result: StepImages = {};
 
@@ -240,12 +367,12 @@ async function processStepImages(
   const screenshotBuffer = await fetchImageAsBuffer(screenshotUrl);
   if (!screenshotBuffer) return result;
 
-  // Create overview with bounding boxes
-  result.overview = await createOverviewImage(screenshotBuffer, boundingBox, sensitiveBoxes, 550);
+  // Create overview with bounding boxes and labels (full quality PNG)
+  result.overview = await createOverviewImage(screenshotBuffer, boundingBox, sensitiveBoxes, uiElementLabel);
 
-  // Create zoom-in of UI element if bounding box exists
+  // Create zoom-in of UI element if bounding box exists (full quality PNG)
   if (boundingBox?.found) {
-    result.zoomIn = await createZoomInImage(screenshotBuffer, boundingBox, 350) ?? undefined;
+    result.zoomIn = await createZoomInImage(screenshotBuffer, boundingBox) ?? undefined;
   }
 
   return result;
@@ -590,7 +717,7 @@ function createImageWithCaption(imageBuffer: Buffer, width: number, height: numb
     new Paragraph({
       children: [
         new ImageRun({
-          type: "jpg",
+          type: "png",
           data: imageBuffer,
           transformation: { width, height },
         }),
@@ -806,17 +933,26 @@ async function createWordDocument(processData: any): Promise<Buffer> {
     children.push(new Paragraph({ text: "", spacing: { after: 200 } }));
 
     // Screenshots section
+    // Debug logging for sensitive boxes
+    console.log(`Step ${step.stepNumber}: sensitiveInfoBoxes =`, JSON.stringify(step.sensitiveInfoBoxes));
+
+    // Get UI element label for the image badge
+    const uiElementLabel = step.uiElement?.elementName || (step.boundingBox as BoundingBox)?.label;
+
     const images = await processStepImages(
       step.screenshotUrl,
       step.boundingBox as BoundingBox,
-      step.sensitiveInfoBoxes as SensitiveInfoBox[]
+      step.sensitiveInfoBoxes as SensitiveInfoBox[],
+      uiElementLabel
     );
 
     if (images.overview) {
       try {
         const overviewImg = await Jimp.read(images.overview);
         const overviewRatio = overviewImg.height / overviewImg.width;
-        const overviewWidth = 550;
+        // Use page width minus margins: 8.5" - 1" = 7.5" = ~540 points (Word uses different units for ImageRun)
+        // Increasing to 700 to use full page width (Narrow margins) for better quality
+        const overviewWidth = 700;
         const overviewHeight = Math.round(overviewWidth * overviewRatio);
 
         // Screenshots header
@@ -829,7 +965,7 @@ async function createWordDocument(processData: any): Promise<Buffer> {
           })
         );
 
-        // Overview image
+        // Overview image (labels are drawn directly on the image)
         children.push(...createImageWithCaption(
           images.overview,
           overviewWidth,
@@ -841,7 +977,8 @@ async function createWordDocument(processData: any): Promise<Buffer> {
         if (images.zoomIn) {
           const zoomImg = await Jimp.read(images.zoomIn);
           const zoomRatio = zoomImg.height / zoomImg.width;
-          const zoomWidth = Math.min(350, zoomImg.width);
+          // Use larger zoom width for better detail visibility
+          const zoomWidth = Math.min(400, zoomImg.width);
           const zoomHeight = Math.round(zoomWidth * zoomRatio);
 
           children.push(...createImageWithCaption(
@@ -851,7 +988,8 @@ async function createWordDocument(processData: any): Promise<Buffer> {
             "Detail - Zoomed view of the UI element"
           ));
         }
-      } catch {
+      } catch (imgError) {
+        console.error("Error loading image for Word document:", imgError);
         children.push(
           new Paragraph({
             children: [new TextRun({ text: "[Screenshot could not be loaded]", italics: true, color: COLORS.secondary })],
@@ -963,10 +1101,10 @@ async function createWordDocument(processData: any): Promise<Buffer> {
         properties: {
           page: {
             margin: {
-              top: convertInchesToTwip(0.75),
-              right: convertInchesToTwip(0.75),
-              bottom: convertInchesToTwip(0.75),
-              left: convertInchesToTwip(0.75),
+              top: convertInchesToTwip(0.5),
+              right: convertInchesToTwip(0.5),
+              bottom: convertInchesToTwip(0.5),
+              left: convertInchesToTwip(0.5),
             },
           },
         },
@@ -979,178 +1117,677 @@ async function createWordDocument(processData: any): Promise<Buffer> {
 }
 
 // ============================================
-// PDF DOCUMENT GENERATION (Simplified)
+// PDF DOCUMENT GENERATION (using pdf-lib - serverless compatible)
 // ============================================
 
-async function createPdfDocument(processData: any): Promise<Buffer> {
-  return new Promise(async (resolve, reject) => {
-    try {
-      const chunks: Buffer[] = [];
-      const doc = new PDFDocument({
-        size: "A4",
-        margins: { top: 50, bottom: 50, left: 50, right: 50 },
-        bufferPages: true,
-      });
+// Helper to convert hex color to rgb values (0-1 range)
+function hexToRgb(hex: string): { r: number; g: number; b: number } {
+  const result = /^#?([a-f\d]{2})([a-f\d]{2})([a-f\d]{2})$/i.exec(hex);
+  if (result) {
+    return {
+      r: parseInt(result[1], 16) / 255,
+      g: parseInt(result[2], 16) / 255,
+      b: parseInt(result[3], 16) / 255,
+    };
+  }
+  return { r: 0, g: 0, b: 0 };
+}
 
-      doc.on("data", (chunk) => chunks.push(chunk));
-      doc.on("end", () => resolve(Buffer.concat(chunks)));
-      doc.on("error", reject);
+// Simple text wrapping helper
+function wrapText(text: string, font: PDFFont, fontSize: number, maxWidth: number): string[] {
+  const words = text.split(' ');
+  const lines: string[] = [];
+  let currentLine = '';
 
-      const pageWidth = doc.page.width - 100;
+  for (const word of words) {
+    const testLine = currentLine ? `${currentLine} ${word}` : word;
+    const testWidth = font.widthOfTextAtSize(testLine, fontSize);
 
-      // Calculate totals
-      const totalSteps = processData.totalStepsAllProcesses || processData.steps?.length || processData.totalSteps || 0;
-      const subprocessCount = processData.subprocessCount || 0;
-
-      // Cover page
-      doc.moveDown(6);
-      doc.fontSize(32).fillColor("#2563eb").text(processData.processName, { align: "center" });
-      doc.moveDown(0.5);
-      doc.fontSize(18).fillColor("#64748b").text("Process Design Document", { align: "center" });
-      doc.moveDown(2);
-      doc.fontSize(12).fillColor("#94a3b8").text(`Generated: ${new Date().toLocaleDateString()}`, { align: "center" });
-      if (processData.job?.fileName) {
-        doc.moveDown(0.3);
-        doc.text(`Source: ${processData.job.fileName}`, { align: "center" });
-      }
-      doc.moveDown(0.3);
-      doc.text(`Total Steps: ${totalSteps}${subprocessCount > 0 ? ` (including ${subprocessCount} subprocesses)` : ""}`, { align: "center" });
-
-      // Process Overview
-      doc.addPage();
-      doc.fontSize(20).fillColor("#1e293b").text("1. Process Overview");
-      doc.moveDown(0.5);
-      doc.fontSize(11).fillColor("#334155").text(processData.processDescription || "No description provided.");
-      doc.moveDown(0.5);
-
-      // Subprocess list if any
-      if (processData.subprocesses?.length > 0) {
-        doc.fontSize(12).fillColor("#1e293b").text("Included Subprocesses:");
-        doc.moveDown(0.3);
-        doc.fontSize(10).fillColor("#64748b");
-        for (const subprocess of processData.subprocesses) {
-          const indent = "  ".repeat((subprocess.hierarchyLevel || 1) - 1);
-          doc.text(`${indent}• ${subprocess.processName} (${subprocess.totalSteps} steps)`);
-        }
-        doc.moveDown(0.5);
-      }
-      doc.moveDown(0.5);
-
-      // Steps
-      doc.fontSize(20).fillColor("#1e293b").text("2. Step-by-Step Documentation");
-      doc.moveDown(0.5);
-
-      // Track process changes for headers
-      let currentProcessName: string | null = null;
-      let globalStepNumber = 0;
-
-      for (const step of processData.steps || []) {
-        if (doc.y > doc.page.height - 300) {
-          doc.addPage();
-        }
-
-        // Add subprocess header if process changes
-        if (step.processName !== currentProcessName) {
-          currentProcessName = step.processName;
-          const processStepCount = (processData.steps || []).filter(
-            (s: any) => s.processName === currentProcessName
-          ).length;
-
-          if (subprocessCount > 0) {
-            doc.moveDown(0.5);
-            if (step.isSubprocessStep || step.processHierarchyLevel > 1) {
-              // Subprocess header (indigo)
-              doc.fillColor("#4f46e5").fontSize(14)
-                .text(`${currentProcessName} (${processStepCount} steps)`, { underline: true });
-            } else {
-              // Main process header (green)
-              doc.fillColor("#22c55e").fontSize(14)
-                .text(`${currentProcessName} - Main Process (${processStepCount} steps)`, { underline: true });
-            }
-            doc.moveDown(0.3);
-          }
-        }
-
-        globalStepNumber++;
-
-        // Step header with global number
-        const stepLabel = subprocessCount > 0
-          ? `Step ${globalStepNumber} (${step.processName} #${step.stepNumber})`
-          : `Step ${step.stepNumber}`;
-
-        doc.fontSize(14).fillColor("#2563eb").text(`${stepLabel}: `, { continued: true })
-          .fillColor("#1e293b").text(step.description || "No description");
-        doc.moveDown(0.3);
-
-        // Step details
-        doc.fontSize(9).fillColor("#64748b");
-        doc.text(`Action: ${step.actionType} - ${step.specificAction}  |  Application: ${step.application}`);
-        if (step.uiElement) {
-          doc.text(`UI Element: ${step.uiElement.elementName} (${step.uiElement.elementType})`);
-        }
-        doc.moveDown(0.5);
-
-        // Screenshots
-        const images = await processStepImages(
-          step.screenshotUrl,
-          step.boundingBox as BoundingBox,
-          step.sensitiveInfoBoxes as SensitiveInfoBox[]
-        );
-
-        if (images.overview) {
-          try {
-            const img = await Jimp.read(images.overview);
-            const imgWidth = Math.min(pageWidth, 450);
-            const imgHeight = imgWidth * (img.height / img.width);
-
-            if (doc.y + imgHeight > doc.page.height - 80) {
-              doc.addPage();
-            }
-
-            doc.image(images.overview, { fit: [imgWidth, imgHeight], align: "center" });
-            doc.moveDown(0.3);
-            doc.fontSize(8).fillColor("#94a3b8").text("Overview screenshot with highlighted UI element", { align: "center" });
-
-            // Zoom-in
-            if (images.zoomIn) {
-              doc.moveDown(0.3);
-              const zoomImg = await Jimp.read(images.zoomIn);
-              const zoomWidth = Math.min(300, pageWidth * 0.6);
-              const zoomHeight = zoomWidth * (zoomImg.height / zoomImg.width);
-
-              if (doc.y + zoomHeight > doc.page.height - 80) {
-                doc.addPage();
-              }
-
-              doc.image(images.zoomIn, { fit: [zoomWidth, zoomHeight], align: "center" });
-              doc.moveDown(0.2);
-              doc.text("Detail view of UI element", { align: "center" });
-            }
-          } catch {
-            doc.text("[Screenshot could not be loaded]", { align: "center" });
-          }
-        }
-
-        doc.moveDown(1);
-      }
-
-      // Business Rules
-      if (processData.businessRulesObserved?.length > 0) {
-        doc.addPage();
-        doc.fontSize(20).fillColor("#1e293b").text("3. Business Rules Observed");
-        doc.moveDown(0.5);
-        doc.fontSize(11).fillColor("#334155");
-        for (const rule of processData.businessRulesObserved) {
-          doc.text(`• ${rule}`);
-          doc.moveDown(0.3);
-        }
-      }
-
-      doc.end();
-    } catch (error) {
-      reject(error);
+    if (testWidth > maxWidth && currentLine) {
+      lines.push(currentLine);
+      currentLine = word;
+    } else {
+      currentLine = testLine;
     }
+  }
+
+  if (currentLine) {
+    lines.push(currentLine);
+  }
+
+  return lines;
+}
+
+async function createPdfDocument(processData: any): Promise<Buffer> {
+  console.log("Creating PDF document with pdf-lib (serverless compatible)...");
+
+  // Create a new PDF document
+  const pdfDoc = await PDFDocument.create();
+
+  // Embed standard fonts (no filesystem access needed)
+  const helvetica = await pdfDoc.embedFont(StandardFonts.Helvetica);
+  const helveticaBold = await pdfDoc.embedFont(StandardFonts.HelveticaBold);
+
+  // Page dimensions (A4)
+  const pageWidth = 595.28;
+  const pageHeight = 841.89;
+  const margin = 36;
+  const contentWidth = pageWidth - margin * 2;
+
+  // Colors
+  const colors = {
+    primary: hexToRgb(COLORS.primary),
+    secondary: hexToRgb(COLORS.secondary),
+    text: hexToRgb(COLORS.text),
+    border: hexToRgb(COLORS.border),
+    background: hexToRgb(COLORS.background),
+    success: hexToRgb(COLORS.success),
+    danger: hexToRgb(COLORS.danger),
+    white: { r: 1, g: 1, b: 1 },
+    indigo: hexToRgb("4f46e5"),
+  };
+
+  // Current position tracking - initialize with first page
+  let currentPage: PDFPage = pdfDoc.addPage([pageWidth, pageHeight]);
+  let y: number = pageHeight - margin;
+
+  // Helper to add a new page
+  const addPage = () => {
+    currentPage = pdfDoc.addPage([pageWidth, pageHeight]);
+    y = pageHeight - margin;
+    return currentPage;
+  };
+
+  // Helper to check if we need a new page
+  const checkPageBreak = (neededHeight: number) => {
+    if (y - neededHeight < margin) {
+      addPage();
+      return true;
+    }
+    return false;
+  };
+
+  // Helper to draw text and return height used
+  const drawText = (
+    text: string,
+    x: number,
+    fontSize: number,
+    font: PDFFont = helvetica,
+    color = colors.text,
+    maxWidth?: number
+  ): number => {
+    const effectiveMaxWidth = maxWidth || (contentWidth - (x - margin));
+    const lines = wrapText(text, font, fontSize, effectiveMaxWidth);
+    const lineHeight = fontSize * 1.2;
+
+    for (const line of lines) {
+      checkPageBreak(lineHeight);
+      currentPage.drawText(line, {
+        x,
+        y: y - fontSize,
+        size: fontSize,
+        font,
+        color: rgb(color.r, color.g, color.b),
+      });
+      y -= lineHeight;
+    }
+
+    return lines.length * lineHeight;
+  };
+
+  // Helper to draw a rectangle
+  const drawRect = (
+    x: number,
+    rectY: number,
+    width: number,
+    height: number,
+    fillColor?: { r: number; g: number; b: number },
+    borderColor?: { r: number; g: number; b: number }
+  ) => {
+    if (fillColor) {
+      currentPage.drawRectangle({
+        x,
+        y: rectY,
+        width,
+        height,
+        color: rgb(fillColor.r, fillColor.g, fillColor.b),
+      });
+    }
+    if (borderColor) {
+      currentPage.drawRectangle({
+        x,
+        y: rectY,
+        width,
+        height,
+        borderColor: rgb(borderColor.r, borderColor.g, borderColor.b),
+        borderWidth: 1,
+      });
+    }
+  };
+
+  // Helper to draw a horizontal line
+  const drawLine = (lineY: number, color = colors.primary, thickness = 2) => {
+    currentPage.drawLine({
+      start: { x: margin, y: lineY },
+      end: { x: pageWidth - margin, y: lineY },
+      thickness,
+      color: rgb(color.r, color.g, color.b),
+    });
+  };
+
+  // Helper to draw section header
+  const drawSectionHeader = (number: string, title: string) => {
+    checkPageBreak(50);
+    y -= 20;
+
+    // Section number and title
+    const numberWidth = helveticaBold.widthOfTextAtSize(number + "  ", 24);
+    currentPage.drawText(number + "  ", {
+      x: margin,
+      y: y - 24,
+      size: 24,
+      font: helveticaBold,
+      color: rgb(colors.primary.r, colors.primary.g, colors.primary.b),
+    });
+    currentPage.drawText(title, {
+      x: margin + numberWidth,
+      y: y - 24,
+      size: 24,
+      font: helveticaBold,
+      color: rgb(colors.text.r, colors.text.g, colors.text.b),
+    });
+    y -= 35;
+
+    // Underline
+    drawLine(y, colors.primary, 1);
+    y -= 20;
+  };
+
+  // ===== 1. COVER PAGE ===== (first page already created during initialization)
+  // Title (centered)
+  y = pageHeight - 250;
+  const titleText = processData.processName || "Process Design Document";
+  const titleWidth = helveticaBold.widthOfTextAtSize(titleText, 36);
+  currentPage.drawText(titleText, {
+    x: (pageWidth - titleWidth) / 2,
+    y,
+    size: 36,
+    font: helveticaBold,
+    color: rgb(colors.primary.r, colors.primary.g, colors.primary.b),
   });
+
+  // Subtitle
+  y -= 40;
+  const subtitleText = "Process Design Document";
+  const subtitleWidth = helvetica.widthOfTextAtSize(subtitleText, 18);
+  currentPage.drawText(subtitleText, {
+    x: (pageWidth - subtitleWidth) / 2,
+    y,
+    size: 18,
+    font: helvetica,
+    color: rgb(colors.secondary.r, colors.secondary.g, colors.secondary.b),
+  });
+
+  // Decorative line
+  y -= 50;
+  currentPage.drawLine({
+    start: { x: margin + 100, y },
+    end: { x: pageWidth - margin - 100, y },
+    thickness: 3,
+    color: rgb(colors.primary.r, colors.primary.g, colors.primary.b),
+  });
+
+  // Metadata
+  y -= 50;
+  const dateText = `Generated: ${new Date().toLocaleDateString("en-US", { year: "numeric", month: "long", day: "numeric" })}`;
+  const dateWidth = helvetica.widthOfTextAtSize(dateText, 12);
+  currentPage.drawText(dateText, {
+    x: (pageWidth - dateWidth) / 2,
+    y,
+    size: 12,
+    font: helvetica,
+    color: rgb(colors.secondary.r, colors.secondary.g, colors.secondary.b),
+  });
+
+  if (processData.job?.fileName) {
+    y -= 20;
+    const sourceText = `Source: ${processData.job.fileName}`;
+    const sourceWidth = helvetica.widthOfTextAtSize(sourceText, 12);
+    currentPage.drawText(sourceText, {
+      x: (pageWidth - sourceWidth) / 2,
+      y,
+      size: 12,
+      font: helvetica,
+      color: rgb(colors.secondary.r, colors.secondary.g, colors.secondary.b),
+    });
+  }
+
+  const totalSteps = processData.totalStepsAllProcesses || processData.steps?.length || processData.totalSteps || 0;
+  y -= 20;
+  const stepsText = `Total Steps: ${totalSteps}`;
+  const stepsWidth = helvetica.widthOfTextAtSize(stepsText, 12);
+  currentPage.drawText(stepsText, {
+    x: (pageWidth - stepsWidth) / 2,
+    y,
+    size: 12,
+    font: helvetica,
+    color: rgb(colors.secondary.r, colors.secondary.g, colors.secondary.b),
+  });
+
+  // ===== 2. PROCESS OVERVIEW =====
+  addPage();
+  drawSectionHeader("1", "Process Overview");
+
+  // Description
+  const description = processData.processDescription || "No description provided.";
+  drawText(description, margin, 11, helvetica, colors.text);
+  y -= 20;
+
+  // Quick stats
+  const durationText = `Duration: ${formatDuration(processData.recordingDurationSeconds || 0)}  |  Total Steps: ${totalSteps}`;
+  drawText(durationText, margin, 10, helvetica, colors.secondary);
+  y -= 20;
+
+  // Subprocesses list
+  const subprocessCount = processData.subprocessCount || 0;
+  if (processData.subprocesses?.length > 0) {
+    drawText("Included Subprocesses:", margin, 10, helveticaBold, colors.text);
+    y -= 5;
+    for (const subprocess of processData.subprocesses) {
+      const indentLvl = (subprocess.hierarchyLevel || 1) - 1;
+      const indentStr = "  ".repeat(indentLvl) + "- ";
+      drawText(`${indentStr}${subprocess.processName} (${subprocess.totalSteps} steps)`, margin + 20, 10, helvetica, colors.secondary);
+    }
+    y -= 15;
+  }
+
+  // ===== 3. APPLICATIONS USED =====
+  if (processData.applications?.length > 0) {
+    drawSectionHeader("2", "Applications Used");
+
+    const rowHeight = 25;
+    const col1Width = contentWidth * 0.3;
+    const col2Width = contentWidth * 0.25;
+    const col3Width = contentWidth * 0.45;
+
+    // Header row
+    checkPageBreak(rowHeight + 10);
+    const headerY = y - rowHeight;
+    drawRect(margin, headerY, contentWidth, rowHeight, colors.primary);
+
+    currentPage.drawText("Application", {
+      x: margin + 5,
+      y: headerY + 8,
+      size: 10,
+      font: helveticaBold,
+      color: rgb(1, 1, 1),
+    });
+    currentPage.drawText("Type", {
+      x: margin + col1Width + 5,
+      y: headerY + 8,
+      size: 10,
+      font: helveticaBold,
+      color: rgb(1, 1, 1),
+    });
+    currentPage.drawText("URL / Version", {
+      x: margin + col1Width + col2Width + 5,
+      y: headerY + 8,
+      size: 10,
+      font: helveticaBold,
+      color: rgb(1, 1, 1),
+    });
+    y = headerY;
+
+    // Data rows
+    for (let i = 0; i < processData.applications.length; i++) {
+      const app = processData.applications[i];
+      checkPageBreak(rowHeight);
+      const rowY = y - rowHeight;
+
+      if (i % 2 === 0) {
+        drawRect(margin, rowY, contentWidth, rowHeight, colors.background);
+      }
+      drawRect(margin, rowY, contentWidth, rowHeight, undefined, colors.border);
+
+      currentPage.drawText((app.name || "-").substring(0, 25), {
+        x: margin + 5,
+        y: rowY + 8,
+        size: 10,
+        font: helvetica,
+        color: rgb(colors.text.r, colors.text.g, colors.text.b),
+      });
+      currentPage.drawText((app.type?.replace(/_/g, " ") || "-").substring(0, 20), {
+        x: margin + col1Width + 5,
+        y: rowY + 8,
+        size: 10,
+        font: helvetica,
+        color: rgb(colors.text.r, colors.text.g, colors.text.b),
+      });
+      currentPage.drawText((app.url || app.version || "-").substring(0, 40), {
+        x: margin + col1Width + col2Width + 5,
+        y: rowY + 8,
+        size: 10,
+        font: helvetica,
+        color: rgb(colors.text.r, colors.text.g, colors.text.b),
+      });
+      y = rowY;
+    }
+    y -= 20;
+  }
+
+  // ===== 4. STEP-BY-STEP DOCUMENTATION =====
+  addPage();
+  drawSectionHeader("3", "Step-by-Step Documentation");
+
+  let currentProcessName: string | null = null;
+  let globalStepNumber = 0;
+
+  for (const step of processData.steps || []) {
+    // Process header for subprocesses
+    if (step.processName !== currentProcessName) {
+      currentProcessName = step.processName;
+      const processStepCount = (processData.steps || []).filter(
+        (s: any) => s.processName === currentProcessName
+      ).length;
+
+      if (subprocessCount > 0) {
+        checkPageBreak(40);
+        const isMain = !step.isSubprocessStep && step.processHierarchyLevel <= 1;
+        const headerHeight = 30;
+        const headerY = y - headerHeight;
+        const bgColor = isMain ? colors.success : colors.indigo;
+
+        drawRect(margin, headerY, contentWidth, headerHeight, bgColor);
+
+        const processLabel = isMain ? `${currentProcessName} (Main Process)` : currentProcessName!;
+        currentPage.drawText(processLabel.substring(0, 60), {
+          x: margin + 10,
+          y: headerY + 10,
+          size: 14,
+          font: helveticaBold,
+          color: rgb(1, 1, 1),
+        });
+
+        const countText = `${processStepCount} steps`;
+        const countWidth = helvetica.widthOfTextAtSize(countText, 10);
+        currentPage.drawText(countText, {
+          x: pageWidth - margin - countWidth - 10,
+          y: headerY + 12,
+          size: 10,
+          font: helvetica,
+          color: rgb(1, 1, 1),
+        });
+
+        y = headerY - 10;
+      }
+    }
+
+    globalStepNumber++;
+
+    // Step header
+    checkPageBreak(150); // Reserve space for step content
+    const stepLabel = subprocessCount > 0
+      ? `Step ${globalStepNumber} (${step.processName} #${step.stepNumber})`
+      : `Step ${step.stepNumber}`;
+
+    const stepHeaderHeight = 25;
+    const stepHeaderY = y - stepHeaderHeight;
+    drawRect(margin, stepHeaderY, contentWidth, stepHeaderHeight, colors.primary);
+
+    currentPage.drawText(stepLabel, {
+      x: margin + 10,
+      y: stepHeaderY + 8,
+      size: 12,
+      font: helveticaBold,
+      color: rgb(1, 1, 1),
+    });
+    y = stepHeaderY;
+
+    // Description
+    const descHeight = 25;
+    const descY = y - descHeight;
+    drawRect(margin, descY, contentWidth, descHeight, colors.background);
+
+    const descText = step.description || "No description";
+    const truncatedDesc = descText.length > 100 ? descText.substring(0, 100) + "..." : descText;
+    currentPage.drawText(truncatedDesc, {
+      x: margin + 10,
+      y: descY + 8,
+      size: 10,
+      font: helvetica,
+      color: rgb(colors.text.r, colors.text.g, colors.text.b),
+    });
+    y = descY;
+
+    // Details rows
+    const rowHeight = 22;
+
+    // Row 1: Timestamp | Action | Application
+    const row1Y = y - rowHeight;
+    drawRect(margin, row1Y, contentWidth, rowHeight, undefined, colors.border);
+
+    const timeLabel = "Time: ";
+    const timeValue = step.timestamp || "-";
+    const actionLabel = "Action: ";
+    const actionValue = `${step.actionType?.replace(/_/g, " ") || ""} > ${step.specificAction?.replace(/_/g, " ") || ""}`;
+    const appLabel = "App: ";
+    const appValue = step.application || "-";
+
+    currentPage.drawText(timeLabel, { x: margin + 5, y: row1Y + 6, size: 9, font: helveticaBold, color: rgb(colors.secondary.r, colors.secondary.g, colors.secondary.b) });
+    currentPage.drawText(timeValue, { x: margin + 5 + helveticaBold.widthOfTextAtSize(timeLabel, 9), y: row1Y + 6, size: 9, font: helvetica, color: rgb(colors.text.r, colors.text.g, colors.text.b) });
+
+    currentPage.drawText(actionLabel, { x: margin + 100, y: row1Y + 6, size: 9, font: helveticaBold, color: rgb(colors.secondary.r, colors.secondary.g, colors.secondary.b) });
+    currentPage.drawText(actionValue.substring(0, 40), { x: margin + 100 + helveticaBold.widthOfTextAtSize(actionLabel, 9), y: row1Y + 6, size: 9, font: helvetica, color: rgb(colors.text.r, colors.text.g, colors.text.b) });
+
+    currentPage.drawText(appLabel, { x: margin + 350, y: row1Y + 6, size: 9, font: helveticaBold, color: rgb(colors.secondary.r, colors.secondary.g, colors.secondary.b) });
+    currentPage.drawText(appValue.substring(0, 25), { x: margin + 350 + helveticaBold.widthOfTextAtSize(appLabel, 9), y: row1Y + 6, size: 9, font: helvetica, color: rgb(colors.text.r, colors.text.g, colors.text.b) });
+    y = row1Y;
+
+    // Row 2: Screen | UI Element
+    const row2Y = y - rowHeight;
+    drawRect(margin, row2Y, contentWidth, rowHeight, undefined, colors.border);
+
+    const screenLabel = "Screen: ";
+    const screenValue = step.screenName || "-";
+    const elementLabel = "Element: ";
+    const elementValue = step.uiElement
+      ? `${step.uiElement.elementName || ""} (${step.uiElement.elementType || ""})`
+      : "-";
+
+    currentPage.drawText(screenLabel, { x: margin + 5, y: row2Y + 6, size: 9, font: helveticaBold, color: rgb(colors.secondary.r, colors.secondary.g, colors.secondary.b) });
+    currentPage.drawText(screenValue.substring(0, 30), { x: margin + 5 + helveticaBold.widthOfTextAtSize(screenLabel, 9), y: row2Y + 6, size: 9, font: helvetica, color: rgb(colors.text.r, colors.text.g, colors.text.b) });
+
+    currentPage.drawText(elementLabel, { x: margin + 180, y: row2Y + 6, size: 9, font: helveticaBold, color: rgb(colors.secondary.r, colors.secondary.g, colors.secondary.b) });
+    currentPage.drawText(elementValue.substring(0, 50), { x: margin + 180 + helveticaBold.widthOfTextAtSize(elementLabel, 9), y: row2Y + 6, size: 9, font: helvetica, color: rgb(colors.text.r, colors.text.g, colors.text.b) });
+    y = row2Y;
+
+    // Row 3: Data info (if exists)
+    if (step.dataInfo) {
+      const row3Y = y - rowHeight;
+      drawRect(margin, row3Y, contentWidth, rowHeight, undefined, colors.border);
+
+      const dataLabel = "Data: ";
+      const dataValue = step.dataInfo.isSensitive ? "[SENSITIVE]" : (step.dataInfo.value || "-");
+      const typeLabel = "Type: ";
+      const typeValue = step.dataInfo.dataType || "-";
+
+      currentPage.drawText(dataLabel, { x: margin + 5, y: row3Y + 6, size: 9, font: helveticaBold, color: rgb(colors.secondary.r, colors.secondary.g, colors.secondary.b) });
+      currentPage.drawText(dataValue.substring(0, 50), { x: margin + 5 + helveticaBold.widthOfTextAtSize(dataLabel, 9), y: row3Y + 6, size: 9, font: helvetica, color: rgb(colors.text.r, colors.text.g, colors.text.b) });
+
+      currentPage.drawText(typeLabel, { x: margin + 350, y: row3Y + 6, size: 9, font: helveticaBold, color: rgb(colors.secondary.r, colors.secondary.g, colors.secondary.b) });
+      currentPage.drawText(typeValue, { x: margin + 350 + helveticaBold.widthOfTextAtSize(typeLabel, 9), y: row3Y + 6, size: 9, font: helvetica, color: rgb(colors.text.r, colors.text.g, colors.text.b) });
+      y = row3Y;
+    }
+
+    // Notes (if exists)
+    if (step.notes) {
+      const noteY = y - 20;
+      drawRect(margin, noteY, contentWidth, 18, { r: 0.996, g: 0.953, b: 0.78 }, colors.border); // amber background
+
+      currentPage.drawText("Note: ", { x: margin + 5, y: noteY + 4, size: 9, font: helveticaBold, color: rgb(colors.secondary.r, colors.secondary.g, colors.secondary.b) });
+      currentPage.drawText(step.notes.substring(0, 80), { x: margin + 5 + helveticaBold.widthOfTextAtSize("Note: ", 9), y: noteY + 4, size: 9, font: helvetica, color: rgb(colors.text.r, colors.text.g, colors.text.b) });
+      y = noteY;
+    }
+
+    // Screenshots section - get UI element label for image badge
+    const pdfUiElementLabel = step.uiElement?.elementName || (step.boundingBox as BoundingBox)?.label;
+
+    const images = await processStepImages(
+      step.screenshotUrl,
+      step.boundingBox as BoundingBox,
+      step.sensitiveInfoBoxes as SensitiveInfoBox[],
+      pdfUiElementLabel
+    );
+
+    if (images.overview) {
+      try {
+        y -= 15;
+        currentPage.drawText("Screenshots", {
+          x: margin,
+          y: y - 10,
+          size: 10,
+          font: helveticaBold,
+          color: rgb(colors.text.r, colors.text.g, colors.text.b),
+        });
+        y -= 20;
+
+        // Embed the PNG image
+        const overviewImg = await Jimp.read(images.overview);
+        const overviewRatio = overviewImg.height / overviewImg.width;
+
+        // Calculate dimensions to fit page
+        const maxImgWidth = Math.min(contentWidth, 450);
+        const imgWidth = maxImgWidth;
+        const imgHeight = imgWidth * overviewRatio;
+
+        // Check if we need a new page for the image
+        if (y - imgHeight - 30 < margin) {
+          addPage();
+        }
+
+        const pngImage = await pdfDoc.embedPng(images.overview);
+        const imgY = y - imgHeight;
+
+        currentPage.drawImage(pngImage, {
+          x: margin + (contentWidth - imgWidth) / 2,
+          y: imgY,
+          width: imgWidth,
+          height: imgHeight,
+        });
+
+        y = imgY - 5;
+
+        // Caption
+        const captionText = "Overview - Full screen with highlighted UI element";
+        const captionWidth = helvetica.widthOfTextAtSize(captionText, 8);
+        currentPage.drawText(captionText, {
+          x: (pageWidth - captionWidth) / 2,
+          y: y - 8,
+          size: 8,
+          font: helvetica,
+          color: rgb(colors.secondary.r, colors.secondary.g, colors.secondary.b),
+        });
+        y -= 20;
+
+        // Zoom-in image if available
+        if (images.zoomIn) {
+          const zoomImg = await Jimp.read(images.zoomIn);
+          const zoomRatio = zoomImg.height / zoomImg.width;
+          const zoomWidth = Math.min(250, contentWidth * 0.5);
+          const zoomHeight = zoomWidth * zoomRatio;
+
+          if (y - zoomHeight - 30 < margin) {
+            addPage();
+          }
+
+          const zoomPngImage = await pdfDoc.embedPng(images.zoomIn);
+          const zoomImgY = y - zoomHeight;
+
+          currentPage.drawImage(zoomPngImage, {
+            x: margin + (contentWidth - zoomWidth) / 2,
+            y: zoomImgY,
+            width: zoomWidth,
+            height: zoomHeight,
+          });
+
+          y = zoomImgY - 5;
+
+          const zoomCaptionText = "Detail - Zoomed view of the UI element";
+          const zoomCaptionWidth = helvetica.widthOfTextAtSize(zoomCaptionText, 8);
+          currentPage.drawText(zoomCaptionText, {
+            x: (pageWidth - zoomCaptionWidth) / 2,
+            y: y - 8,
+            size: 8,
+            font: helvetica,
+            color: rgb(colors.secondary.r, colors.secondary.g, colors.secondary.b),
+          });
+          y -= 15;
+        }
+      } catch (imgError) {
+        console.error("PDF Image Error:", imgError);
+        currentPage.drawText("[Image processing failed]", {
+          x: margin,
+          y: y - 10,
+          size: 9,
+          font: helvetica,
+          color: rgb(colors.danger.r, colors.danger.g, colors.danger.b),
+        });
+        y -= 15;
+      }
+    }
+
+    // Separator line
+    y -= 10;
+    drawLine(y, colors.border, 1);
+    y -= 20;
+  }
+
+  // ===== 5. BUSINESS RULES =====
+  if (processData.businessRulesObserved?.length > 0) {
+    addPage();
+    drawSectionHeader("4", "Business Rules Observed");
+
+    for (const rule of processData.businessRulesObserved) {
+      checkPageBreak(20);
+      currentPage.drawText("*  ", {
+        x: margin + 10,
+        y: y - 11,
+        size: 11,
+        font: helvetica,
+        color: rgb(colors.primary.r, colors.primary.g, colors.primary.b),
+      });
+      drawText(rule, margin + 25, 11, helvetica, colors.text);
+      y -= 5;
+    }
+  }
+
+  // ===== 6. EXCEPTIONS =====
+  if (processData.exceptionsNoted?.length > 0) {
+    if (y < pageHeight * 0.3) {
+      addPage();
+    }
+    y -= 30;
+
+    const secNum = processData.businessRulesObserved?.length > 0 ? "5" : "4";
+    drawSectionHeader(secNum, "Exceptions Noted");
+
+    for (const exception of processData.exceptionsNoted) {
+      checkPageBreak(20);
+      currentPage.drawText("! ", {
+        x: margin + 10,
+        y: y - 11,
+        size: 11,
+        font: helveticaBold,
+        color: rgb(colors.danger.r, colors.danger.g, colors.danger.b),
+      });
+      drawText(exception, margin + 25, 11, helvetica, colors.text);
+      y -= 5;
+    }
+  }
+
+  // Save the document
+  const pdfBytes = await pdfDoc.save();
+  return Buffer.from(pdfBytes);
 }
 
 // ============================================

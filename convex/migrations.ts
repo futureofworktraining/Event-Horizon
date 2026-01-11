@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
 import { mutation } from "./_generated/server";
 
 // Migration to clear old process data that had embedded steps
@@ -12,7 +13,7 @@ export const clearOldProcesses = mutation({
     let deletedCount = 0;
     for (const process of processes) {
       // Check if the process has embedded steps (old schema)
-      if ((process as any).steps) {
+      if (/* eslint-disable-next-line @typescript-eslint/no-explicit-any */ (process as any).steps) {
         await ctx.db.delete(process._id);
         deletedCount++;
       }
@@ -48,12 +49,13 @@ export const clearOldBoundingBoxes = mutation({
     let clearedCount = 0;
     for (const step of steps) {
       // Check if step has old boundingBoxes array
-      if ((step as any).boundingBoxes || (step as any).boundingBoxesDetected) {
+      if (/* eslint-disable-next-line @typescript-eslint/no-explicit-any */ (step as any).boundingBoxes || /* eslint-disable-next-line @typescript-eslint/no-explicit-any */ (step as any).boundingBoxesDetected) {
         await ctx.db.patch(step._id, {
           boundingBoxes: undefined,
           boundingBoxesDetected: undefined,
           boundingBox: undefined,
           boundingBoxDetected: undefined,
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
         } as any);
         clearedCount++;
       }
@@ -161,7 +163,9 @@ export const generateFlowsForExistingProcesses = mutation({
       // Create the flow
       await ctx.db.insert("processFlows", {
         processId: process._id,
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
         nodes: nodes as any,
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
         edges: edges as any,
         createdAt: Date.now(),
       });

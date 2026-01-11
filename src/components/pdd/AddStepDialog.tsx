@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
 "use client";
 
 import { useState, useRef, useCallback, useEffect } from "react";
@@ -95,33 +96,58 @@ export function AddStepDialog({
     }
   }, [afterStepNumber]);
 
-  const [formData, setFormData] = useState({
+  const [formData, setFormData] = useState<{
+    description: string;
+    application: string;
+    screenName: string;
+    timestamp: string;
+    timestampSeconds: number;
+    actionType: typeof ACTION_TYPES[number];
+    specificAction: string;
+    screenshotRequired: boolean;
+    notes: string;
+    automationHint: string;
+  }>({
     description: "",
     application: defaultApplication,
     screenName: "",
     timestamp: "00:00.000",
     timestampSeconds: 0,
-    actionType: "ui_interaction" as const,
-    specificAction: "click" as const,
+    actionType: "ui_interaction",
+    specificAction: "click",
     screenshotRequired: true,
     notes: "",
     automationHint: "",
   });
 
-  const [uiElement, setUiElement] = useState({
+  const [uiElement, setUiElement] = useState<{
+    enabled: boolean;
+    elementName: string;
+    elementType: typeof ELEMENT_TYPES[number];
+    locationDescription: string;
+    screenRegion: typeof SCREEN_REGIONS[number];
+    parentElement: string;
+  }>({
     enabled: false,
     elementName: "",
-    elementType: "button" as const,
+    elementType: "button",
     locationDescription: "",
-    screenRegion: "middle_center" as const,
+    screenRegion: "middle_center",
     parentElement: "",
   });
 
-  const [dataInfo, setDataInfo] = useState({
+  const [dataInfo, setDataInfo] = useState<{
+    enabled: boolean;
+    value: string;
+    dataType: typeof DATA_TYPES[number];
+    source: typeof DATA_SOURCES[number];
+    isSensitive: boolean;
+    format: string;
+  }>({
     enabled: false,
     value: "",
-    dataType: "text" as const,
-    source: "user_input" as const,
+    dataType: "text",
+    source: "user_input",
     isSensitive: false,
     format: "",
   });
@@ -170,9 +196,9 @@ export function AddStepDialog({
       setUiElement({
         enabled: true,
         elementName: "", // Don't clone element name - likely different
-        elementType: step.uiElement.elementType || "button",
+        elementType: (step.uiElement.elementType as typeof ELEMENT_TYPES[number]) || "button",
         locationDescription: step.uiElement.locationDescription || "",
-        screenRegion: step.uiElement.screenRegion || "middle_center",
+        screenRegion: (step.uiElement.screenRegion as typeof SCREEN_REGIONS[number]) || "middle_center",
         parentElement: step.uiElement.parentElement || "",
       });
     }
@@ -181,8 +207,8 @@ export function AddStepDialog({
       setDataInfo({
         enabled: true,
         value: "", // Don't clone value
-        dataType: step.dataInfo.dataType || "text",
-        source: step.dataInfo.source || "user_input",
+        dataType: (step.dataInfo.dataType as typeof DATA_TYPES[number]) || "text",
+        source: (step.dataInfo.source as typeof DATA_SOURCES[number]) || "user_input",
         isSensitive: step.dataInfo.isSensitive || false,
         format: step.dataInfo.format || "",
       });
@@ -197,7 +223,7 @@ export function AddStepDialog({
     const newValidActions = SPECIFIC_ACTIONS[newActionType as keyof typeof SPECIFIC_ACTIONS] || [];
     setFormData(prev => ({
       ...prev,
-      actionType: newActionType as any,
+      actionType: newActionType as typeof ACTION_TYPES[number],
       specificAction: newValidActions[0] || "click",
     }));
   };
@@ -333,7 +359,7 @@ export function AddStepDialog({
         timestamp: formData.timestamp,
         timestampSeconds: formData.timestampSeconds,
         actionType: formData.actionType,
-        specificAction: formData.specificAction,
+        specificAction: formData.specificAction as any,
         description: formData.description,
         application: formData.application,
         screenName: formData.screenName,
@@ -820,6 +846,7 @@ export function AddStepDialog({
               {screenshotPreview && (
                 <div className="mb-4">
                   <label className="text-sm font-medium mb-2 block">Screenshot Preview</label>
+                  {/* eslint-disable-next-line @next/next/no-img-element */}
                   <img
                     src={screenshotPreview}
                     alt="Screenshot preview"

@@ -1,14 +1,21 @@
 "use client";
 
+import { useState } from "react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { VideoUploader } from "@/components/VideoUploader";
 import { JobsList } from "@/components/JobsList";
+import { PddGenerationToast } from "@/components/pdd/PddGenerationToast";
 import { toast } from "sonner";
 import { Upload, History } from "lucide-react";
+import { Id } from "../../../convex/_generated/dataModel";
 
 export default function UploadPage() {
+  const [activeJobId, setActiveJobId] = useState<Id<"jobs"> | null>(null);
+
   const handleJobCreated = (jobId: string) => {
-    toast.success("Video uploaded successfully! Analysis will begin shortly.");
+    toast.success("Video uploaded! PDD generation starting...");
+    // Set the active job to show the progress toast
+    setActiveJobId(jobId as Id<"jobs">);
   };
 
   return (
@@ -81,6 +88,11 @@ export default function UploadPage() {
           </Card>
         </div>
       </div>
+
+      {/* PDD Generation Progress Toast */}
+      {activeJobId && (
+        <PddGenerationToast jobId={activeJobId} />
+      )}
     </div>
   );
 }

@@ -201,7 +201,7 @@ export function BoundingBoxDetector({
             ) : (
               prompt ? (
                 <p className="text-xs text-blue-800 bg-blue-100 p-2 rounded italic">
-                  "{prompt}"
+                  &quot;{prompt}&quot;
                 </p>
               ) : (
                 <p className="text-xs text-blue-500 italic">No custom instructions provided (using default detection).</p>

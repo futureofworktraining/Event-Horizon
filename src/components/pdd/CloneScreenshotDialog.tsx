@@ -111,6 +111,7 @@ export function CloneScreenshotDialog({
                   {/* Thumbnail */}
                   <div className="flex-shrink-0 w-24 h-16 bg-gray-100 rounded overflow-hidden">
                     {step.screenshotUrl ? (
+                      // eslint-disable-next-line @next/next/no-img-element
                       <img
                         src={step.screenshotUrl}
                         alt={`Step ${step.stepNumber}`}

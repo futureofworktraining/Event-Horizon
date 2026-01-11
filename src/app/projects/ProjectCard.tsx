@@ -1,9 +1,18 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
 import { useMutation } from "convex/react";
 import { useState } from "react";
 import { api } from "../../../convex/_generated/api";
 import { Button } from "@/components/ui/button";
 import { FileText, Clock, CheckCircle2, ArrowRight, Loader2, AlertCircle, Trash2 } from "lucide-react";
 import Link from "next/link";
+import {
+    Dialog,
+    DialogContent,
+    DialogDescription,
+    DialogFooter,
+    DialogHeader,
+    DialogTitle,
+} from "@/components/ui/dialog";
 
 function formatDate(timestamp: number): string {
     return new Date(timestamp).toLocaleString("en-US", {
@@ -36,17 +45,12 @@ function StatusBadge({ status }: { status: string }) {
 export function ProjectCard({ job, isCompleted }: { job: any, isCompleted: boolean }) {
     const deleteJob = useMutation(api.jobs.deleteJob);
     const [isDeleting, setIsDeleting] = useState(false);
+    const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
 
-    const handleDelete = async (e: React.MouseEvent) => {
-        e.preventDefault();
-        e.stopPropagation();
-
-        if (!confirm("Are you sure you want to delete this project? This action cannot be undone.")) {
-            return;
-        }
-
+    const handleDelete = async () => {
         try {
             setIsDeleting(true);
+            setIsDeleteDialogOpen(false);
             await deleteJob({ jobId: job._id });
         } catch (error) {
             console.error("Failed to delete job:", error);
@@ -54,6 +58,12 @@ export function ProjectCard({ job, isCompleted }: { job: any, isCompleted: boole
         } finally {
             setIsDeleting(false);
         }
+    };
+
+    const handleOpenDeleteDialog = (e: React.MouseEvent) => {
+        e.preventDefault();
+        e.stopPropagation();
+        setIsDeleteDialogOpen(true);
     };
 
     const content = (
@@ -82,7 +92,7 @@ export function ProjectCard({ job, isCompleted }: { job: any, isCompleted: boole
                     variant="ghost"
                     size="icon"
                     className="h-8 w-8 text-muted-foreground hover:text-red-600 hover:bg-red-50 -mr-2"
-                    onClick={handleDelete}
+                    onClick={handleOpenDeleteDialog}
                     disabled={isDeleting}
                 >
                     {isDeleting ? (
@@ -97,18 +107,84 @@ export function ProjectCard({ job, isCompleted }: { job: any, isCompleted: boole
 
     if (isCompleted) {
         return (
-            <Link
-                href={`/process/${job.processId}`}
-                className="group p-4 rounded-lg border bg-card transition-all hover:bg-muted/30 hover:border-violet-200 cursor-pointer block"
-            >
-                {content}
-            </Link>
+            <>
+                <Link
+                    href={`/process/${job.processId}`}
+                    className="group p-4 rounded-lg border bg-card transition-all hover:bg-muted/30 hover:border-violet-200 cursor-pointer block"
+                >
+                    {content}
+                </Link>
+                <Dialog open={isDeleteDialogOpen} onOpenChange={setIsDeleteDialogOpen}>
+                    <DialogContent className="sm:max-w-[425px]">
+                        <DialogHeader>
+                            <DialogTitle className="flex items-center gap-2 text-destructive">
+                                <Trash2 className="w-5 h-5" />
+                                Delete Project
+                            </DialogTitle>
+                            <DialogDescription className="py-2">
+                                Are you sure you want to delete this project? This action cannot be undone and all associated documents will be lost.
+                            </DialogDescription>
+                        </DialogHeader>
+                        <div className="p-4 bg-muted/50 rounded-lg mb-4">
+                            <p className="font-medium text-sm truncate">{job.fileName}</p>
+                            <p className="text-xs text-muted-foreground mt-1">Created on {formatDate(job.createdAt)}</p>
+                        </div>
+                        <DialogFooter className="gap-3">
+                            <Button
+                                variant="outline"
+                                onClick={() => setIsDeleteDialogOpen(false)}
+                            >
+                                Cancel
+                            </Button>
+                            <Button
+                                variant="destructive"
+                                onClick={handleDelete}
+                            >
+                                Delete Project
+                            </Button>
+                        </DialogFooter>
+                    </DialogContent>
+                </Dialog>
+            </>
         );
     }
 
     return (
-        <div className="p-4 rounded-lg border bg-card opacity-80">
-            {content}
-        </div>
+        <>
+            <div className="p-4 rounded-lg border bg-card opacity-80">
+                {content}
+            </div>
+            <Dialog open={isDeleteDialogOpen} onOpenChange={setIsDeleteDialogOpen}>
+                <DialogContent className="sm:max-w-[425px]">
+                    <DialogHeader>
+                        <DialogTitle className="flex items-center gap-2 text-destructive">
+                            <Trash2 className="w-5 h-5" />
+                            Delete Project
+                        </DialogTitle>
+                        <DialogDescription className="py-2">
+                            Are you sure you want to delete this project? This action cannot be undone and all associated documents will be lost.
+                        </DialogDescription>
+                    </DialogHeader>
+                    <div className="p-4 bg-muted/50 rounded-lg mb-4">
+                        <p className="font-medium text-sm truncate">{job.fileName}</p>
+                        <p className="text-xs text-muted-foreground mt-1">Created on {formatDate(job.createdAt)}</p>
+                    </div>
+                    <DialogFooter className="gap-3">
+                        <Button
+                            variant="outline"
+                            onClick={() => setIsDeleteDialogOpen(false)}
+                        >
+                            Cancel
+                        </Button>
+                        <Button
+                            variant="destructive"
+                            onClick={handleDelete}
+                        >
+                            Delete Project
+                        </Button>
+                    </DialogFooter>
+                </DialogContent>
+            </Dialog>
+        </>
     );
 }

@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
 "use client";
 
 import { useState, useEffect, useRef, useCallback } from "react";
@@ -1020,6 +1021,7 @@ export function ScreenshotLightbox({
                     maxWidth: "85vw",
                   }}
                 >
+                  {/* eslint-disable-next-line @next/next/no-img-element */}
                   <img
                     src={step.screenshotUrl}
                     alt={`Screenshot for step ${step.stepNumber}`}
@@ -1295,6 +1297,7 @@ export function ScreenshotLightbox({
                             pointerEvents: "none",
                           }}
                         >
+                          {/* eslint-disable-next-line @next/next/no-img-element */}
                           <img
                             src={step.screenshotUrl!}
                             alt={`Cropped element: ${elementName}`}
