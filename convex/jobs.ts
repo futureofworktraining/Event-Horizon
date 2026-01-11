@@ -462,32 +462,75 @@ export const deleteJob = mutation({
       throw new Error("Job not found");
     }
 
-    // If job has a process, delete it and all its steps
-    if (job.processId) {
-      const process = await ctx.db.get(job.processId);
-      if (process) {
-        // Get all steps for this process
-        const steps = await ctx.db
-          .query("steps")
-          .withIndex("by_process", (q) => q.eq("processId", job.processId!))
-          .collect();
+    // Get ALL processes for this job (including subprocesses)
+    const allProcesses = await ctx.db
+      .query("processes")
+      .withIndex("by_job", (q) => q.eq("jobId", args.jobId))
+      .collect();
 
-        // Delete all step screenshots from storage
-        for (const step of steps) {
-          if (step.screenshotStorageId) {
+    // Delete all processes and their associated data
+    for (const process of allProcesses) {
+      // Get all steps for this process
+      const steps = await ctx.db
+        .query("steps")
+        .withIndex("by_process", (q) => q.eq("processId", process._id))
+        .collect();
+
+      // Delete all step screenshots and overlay images from storage
+      for (const step of steps) {
+        if (step.screenshotStorageId) {
+          try {
             await ctx.storage.delete(step.screenshotStorageId);
+          } catch (e) {
+            console.error("Failed to delete screenshot:", e);
           }
-          await ctx.db.delete(step._id);
         }
+        if (step.overlayImageStorageId) {
+          try {
+            await ctx.storage.delete(step.overlayImageStorageId);
+          } catch (e) {
+            console.error("Failed to delete overlay image:", e);
+          }
+        }
+        await ctx.db.delete(step._id);
+      }
 
-        // Delete the process
-        await ctx.db.delete(job.processId);
+      // Delete the process flow
+      const flow = await ctx.db
+        .query("processFlows")
+        .withIndex("by_process", (q) => q.eq("processId", process._id))
+        .first();
+      if (flow) {
+        await ctx.db.delete(flow._id);
+      }
+
+      // Delete the process
+      await ctx.db.delete(process._id);
+    }
+
+    // Delete any documents associated with this job's processes
+    for (const process of allProcesses) {
+      const docs = await ctx.db
+        .query("documents")
+        .withIndex("by_process", (q) => q.eq("processId", process._id))
+        .collect();
+      for (const doc of docs) {
+        try {
+          await ctx.storage.delete(doc.storageId);
+        } catch (e) {
+          console.error("Failed to delete document:", e);
+        }
+        await ctx.db.delete(doc._id);
       }
     }
 
     // Delete the video from storage
     if (job.videoStorageId) {
-      await ctx.storage.delete(job.videoStorageId);
+      try {
+        await ctx.storage.delete(job.videoStorageId);
+      } catch (e) {
+        console.error("Failed to delete video:", e);
+      }
     }
 
     // Delete the job
