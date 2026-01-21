@@ -577,6 +577,29 @@ export default defineSchema({
   })
     .index("by_process", ["processId"])
     .index("by_created", ["createdAt"]),
+
+  // Analysis Versions table - stores version history for re-analysis comparisons
+  analysisVersions: defineTable({
+    jobId: v.id("jobs"),
+    versionNumber: v.number(), // 1, 2, 3... increments with each re-analysis
+    createdAt: v.number(),
+
+    // Snapshots of the analysis data at this version
+    processSnapshot: v.string(), // JSON snapshot of process metadata
+    stepsSnapshot: v.string(), // JSON snapshot of all steps
+    flowSnapshot: v.optional(v.string()), // JSON snapshot of flow data
+    rawAiResponse: v.optional(v.string()), // Raw AI response for this version
+
+    // Summary stats for quick comparison
+    totalSteps: v.number(),
+    processName: v.string(),
+
+    // Is this the current active version?
+    isCurrent: v.boolean(),
+  })
+    .index("by_job", ["jobId"])
+    .index("by_job_version", ["jobId", "versionNumber"])
+    .index("by_job_current", ["jobId", "isCurrent"]),
 });
 
 // Export validators for use in other files

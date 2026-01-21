@@ -1,0 +1,480 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Code Studio - Video Analysis Workflow Editor</title>
+  <link rel="stylesheet" href="styles/variables.css">
+  <link rel="stylesheet" href="styles/layout.css">
+  <link rel="stylesheet" href="styles/components.css">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500&family=Outfit:wght@400;500;600;700&display=swap" rel="stylesheet">
+</head>
+<body>
+  <div class="app-container">
+    <!-- Header -->
+    <header class="app-header">
+      <div class="header-left">
+        <span class="logo">Code Studio</span>
+        <div class="divider"></div>
+        <span class="current-file">workflow/main.ts</span>
+      </div>
+
+      <div class="header-center">
+        <span class="status-badge running">
+          <span class="status-dot"></span>
+          Ready
+        </span>
+      </div>
+
+      <div class="header-right">
+        <button class="btn btn-secondary btn-sm" onclick="app.saveVersion()">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"/>
+            <polyline points="17 21 17 13 7 13 7 21"/>
+            <polyline points="7 3 7 8 15 8"/>
+          </svg>
+          Save
+        </button>
+        <button class="btn btn-secondary btn-sm" onclick="app.openDrawer()" title="View last output">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <rect x="3" y="3" width="18" height="18" rx="2" ry="2"/>
+            <line x1="3" y1="9" x2="21" y2="9"/>
+          </svg>
+          Output
+        </button>
+        <button class="btn btn-secondary btn-sm" onclick="app.compareVersions()">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <path d="M16 3h5v5M8 3H3v5M3 16v5h5M21 16v5h-5M3 12h18"/>
+          </svg>
+          Diff
+        </button>
+        <button class="btn btn-primary btn-sm" onclick="app.runWorkflow()">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <polygon points="5 3 19 12 5 21 5 3"/>
+          </svg>
+          Run
+          <span class="kbd">Ctrl+Enter</span>
+        </button>
+      </div>
+    </header>
+
+    <!-- Main Content -->
+    <main class="main-content">
+      <!-- Activity Bar -->
+      <div class="activity-bar">
+        <div class="activity-item active" data-view="explorer" title="Explorer" onclick="app.switchView('explorer')">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"/>
+          </svg>
+        </div>
+        <div class="activity-item" data-view="versions" title="Versions" onclick="app.switchView('versions')">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <circle cx="12" cy="12" r="4"/>
+            <path d="M16 8v5a3 3 0 0 0 6 0v-1a10 10 0 1 0-3.92 7.94"/>
+          </svg>
+        </div>
+        <div class="activity-item" data-view="tests" title="Test Videos" onclick="app.switchView('tests')">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <polygon points="5 3 19 12 5 21 5 3"/>
+          </svg>
+        </div>
+
+        <div class="activity-spacer"></div>
+
+        <div class="activity-item" data-view="settings" title="Settings" onclick="app.switchView('settings')">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <circle cx="12" cy="12" r="3"/>
+            <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"/>
+          </svg>
+        </div>
+      </div>
+
+      <!-- Sidebar -->
+      <aside class="sidebar">
+        <!-- Explorer Section -->
+        <div class="sidebar-section" data-section="explorer">
+          <div class="sidebar-header">
+            <span class="sidebar-title">Explorer</span>
+            <button class="btn btn-ghost btn-icon btn-sm" title="New File">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <path d="M12 5v14M5 12h14"/>
+              </svg>
+            </button>
+          </div>
+          <div class="sidebar-content">
+            <div class="file-tree" id="file-tree">
+              <!-- Rendered by JS -->
+            </div>
+          </div>
+        </div>
+
+        <!-- Versions Section -->
+        <div class="sidebar-section hidden" data-section="versions">
+          <div class="sidebar-header">
+            <span class="sidebar-title">Versions</span>
+          </div>
+          <div class="sidebar-content">
+            <div class="version-list" id="version-list">
+              <!-- Rendered by JS -->
+            </div>
+          </div>
+        </div>
+
+        <!-- Test Videos Section -->
+        <div class="sidebar-section hidden" data-section="tests">
+          <div class="sidebar-header">
+            <span class="sidebar-title">Test Videos</span>
+            <span id="selected-count" class="selected-count">0 selected</span>
+          </div>
+          <div class="sidebar-content">
+            <div class="test-videos-list" id="test-videos-list">
+              <!-- Rendered by JS -->
+            </div>
+          </div>
+          <div class="sidebar-actions">
+            <button class="btn btn-primary" style="width: 100%;" onclick="app.runBulkTests()">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <polygon points="5 3 19 12 5 21 5 3"/>
+              </svg>
+              Run Selected Tests
+            </button>
+          </div>
+        </div>
+
+        <!-- Settings Section -->
+        <div class="sidebar-section hidden" data-section="settings">
+          <div class="sidebar-header">
+            <span class="sidebar-title">Settings</span>
+          </div>
+          <div class="sidebar-content settings-content">
+            <div class="setting-group">
+              <label class="setting-label">Gemini API Key</label>
+              <input type="password" class="setting-input" id="api-key" placeholder="Enter your API key">
+              <small class="setting-hint">Stored locally in your browser</small>
+            </div>
+            <div class="setting-group">
+              <label class="setting-label">Default Model</label>
+              <select class="setting-select" id="default-model">
+                <option value="gemini-2.5-flash">gemini-2.5-flash</option>
+                <option value="gemini-2.5-pro">gemini-2.5-pro</option>
+              </select>
+              <small class="setting-hint">Can be overridden in config.ts</small>
+            </div>
+            <div class="setting-group">
+              <label class="setting-label">Temperature</label>
+              <input type="number" class="setting-input" id="temperature" value="0.1" step="0.1" min="0" max="2">
+            </div>
+            <div class="setting-group">
+              <label class="setting-label">Max Retries</label>
+              <input type="number" class="setting-input" id="max-retries" value="3" min="0" max="10">
+            </div>
+            <div class="setting-group">
+              <label class="setting-label">Timeout (ms)</label>
+              <input type="number" class="setting-input" id="timeout" value="120000" step="1000">
+            </div>
+            <div class="setting-group">
+              <label class="setting-label">Editor Theme</label>
+              <select id="code-theme-select" class="setting-select" onchange="app.switchCodeTheme(this.value)">
+                <option value="quiet-light">Quiet Light (VSC)</option>
+                <option value="dracula">Dracula (VSC)</option>
+                <option value="matcha">Matcha</option>
+              </select>
+            </div>
+            <div class="sidebar-actions" style="border-top: none; padding-top: 0;">
+              <button class="btn btn-secondary" style="width: 100%;" onclick="saveSettings()">
+                Save Settings
+              </button>
+            </div>
+          </div>
+        </div>
+      </aside>
+
+      <!-- Editor Area -->
+      <section class="editor-area">
+        <!-- Editor Tabs -->
+        <div class="editor-tabs" id="editor-tabs">
+          <!-- Rendered by JS -->
+        </div>
+
+        <!-- Code Editor -->
+        <div class="code-editor" id="monaco-container">
+          <!-- Monaco Editor will be initialized here -->
+          <div style="display: flex; align-items: center; justify-content: center; height: 100%; color: var(--text-muted); font-family: var(--font-mono); font-size: var(--font-size-sm);">
+            Initializing specializing editor...
+          </div>
+        </div>
+
+        <div class="editor-toolbar">
+          <div class="toolbar-left">
+            <span class="toolbar-info" id="line-count">0 lines</span>
+            <span class="toolbar-info" id="char-count">0 chars</span>
+          </div>
+          <div class="toolbar-right">
+            <span class="toolbar-info">TypeScript</span>
+            <span class="toolbar-info">UTF-8</span>
+          </div>
+        </div>
+      </section>
+    </main>
+
+    <!-- Output Drawer -->
+    <div class="drawer-backdrop" id="drawer-backdrop"></div>
+    <aside class="output-drawer" id="output-drawer">
+      <div class="drawer-header">
+        <span class="drawer-title">Output</span>
+        <button class="btn btn-ghost btn-icon" id="close-drawer">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <line x1="18" y1="6" x2="6" y2="18"/>
+            <line x1="6" y1="6" x2="18" y2="18"/>
+          </svg>
+        </button>
+      </div>
+
+      <!-- Drawer Tabs -->
+      <div class="drawer-tabs">
+        <button class="drawer-tab active" data-tab="output">Steps</button>
+        <button class="drawer-tab" data-tab="flowchart">Flowchart</button>
+        <button class="drawer-tab" data-tab="logs">Logs</button>
+        <button class="drawer-tab" data-tab="diff">Diff</button>
+      </div>
+
+      <!-- Output Content -->
+      <div class="drawer-content">
+        <!-- Steps Panel -->
+        <div class="drawer-panel" data-panel="output">
+          <div class="steps-container">
+            <!-- Subprocess Group -->
+            <div class="subprocess-group">
+              <div class="subprocess-header" onclick="app.toggleSubprocess(this)">
+                <span class="subprocess-icon">
+                  <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <rect x="3" y="3" width="18" height="18" rx="2" ry="2"/>
+                    <line x1="9" y1="3" x2="9" y2="21"/>
+                  </svg>
+                </span>
+                <span class="subprocess-title">Login Process</span>
+                <span class="subprocess-badge">5 steps</span>
+                <svg class="subprocess-chevron" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                  <polyline points="6 9 12 15 18 9"/>
+                </svg>
+              </div>
+              <div class="subprocess-steps">
+                <div class="step-card" onclick="app.toggleStep(this)">
+                  <div class="step-header">
+                    <span class="step-number">1</span>
+                    <div class="step-content">
+                      <div class="step-title">User navigates to login page</div>
+                      <div class="step-meta">
+                        <span class="action-badge navigate">navigate</span>
+                        <span>00:05.2</span>
+                      </div>
+                    </div>
+                    <div class="step-thumbnail">
+                      <img src="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='80' height='50'%3E%3Crect fill='%23e2e8f0' width='80' height='50'/%3E%3C/svg%3E" alt="">
+                    </div>
+                  </div>
+                </div>
+
+                <div class="step-card" onclick="app.toggleStep(this)">
+                  <div class="step-header">
+                    <span class="step-number">2</span>
+                    <div class="step-content">
+                      <div class="step-title">User enters username in text field</div>
+                      <div class="step-meta">
+                        <span class="action-badge type">type</span>
+                        <span>00:12.8</span>
+                      </div>
+                    </div>
+                    <div class="step-thumbnail">
+                      <img src="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='80' height='50'%3E%3Crect fill='%23e2e8f0' width='80' height='50'/%3E%3C/svg%3E" alt="">
+                    </div>
+                  </div>
+                </div>
+
+                <div class="step-card" onclick="app.toggleStep(this)">
+                  <div class="step-header">
+                    <span class="step-number">3</span>
+                    <div class="step-content">
+                      <div class="step-title">User enters password in password field</div>
+                      <div class="step-meta">
+                        <span class="action-badge type">type</span>
+                        <span>00:18.4</span>
+                        <span class="sensitive-badge">⚠ Sensitive</span>
+                      </div>
+                    </div>
+                    <div class="step-thumbnail">
+                      <img src="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='80' height='50'%3E%3Crect fill='%23e2e8f0' width='80' height='50'/%3E%3C/svg%3E" alt="">
+                    </div>
+                  </div>
+                </div>
+
+                <div class="step-card" onclick="app.toggleStep(this)">
+                  <div class="step-header">
+                    <span class="step-number">4</span>
+                    <div class="step-content">
+                      <div class="step-title">User clicks Login button</div>
+                      <div class="step-meta">
+                        <span class="action-badge click">click</span>
+                        <span>00:22.1</span>
+                      </div>
+                    </div>
+                    <div class="step-thumbnail">
+                      <img src="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='80' height='50'%3E%3Crect fill='%23e2e8f0' width='80' height='50'/%3E%3C/svg%3E" alt="">
+                    </div>
+                  </div>
+                </div>
+
+                <div class="step-card" onclick="app.toggleStep(this)">
+                  <div class="step-header">
+                    <span class="step-number">5</span>
+                    <div class="step-content">
+                      <div class="step-title">System displays dashboard</div>
+                      <div class="step-meta">
+                        <span class="action-badge wait">wait</span>
+                        <span>00:25.6</span>
+                      </div>
+                    </div>
+                    <div class="step-thumbnail">
+                      <img src="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='80' height='50'%3E%3Crect fill='%23e2e8f0' width='80' height='50'/%3E%3C/svg%3E" alt="">
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <!-- Regular steps -->
+            <div class="step-card" onclick="app.toggleStep(this)">
+              <div class="step-header">
+                <span class="step-number">6</span>
+                <div class="step-content">
+                  <div class="step-title">User clicks on Reports menu</div>
+                  <div class="step-meta">
+                    <span class="action-badge click">click</span>
+                    <span>00:32.0</span>
+                  </div>
+                </div>
+                <div class="step-thumbnail">
+                  <img src="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='80' height='50'%3E%3Crect fill='%23e2e8f0' width='80' height='50'/%3E%3C/svg%3E" alt="">
+                </div>
+              </div>
+            </div>
+
+            <div class="step-card" onclick="app.toggleStep(this)">
+              <div class="step-header">
+                <span class="step-number">7</span>
+                <div class="step-content">
+                  <div class="step-title">User selects date range from dropdown</div>
+                  <div class="step-meta">
+                    <span class="action-badge click">select</span>
+                    <span>00:38.5</span>
+                  </div>
+                </div>
+                <div class="step-thumbnail">
+                  <img src="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='80' height='50'%3E%3Crect fill='%23e2e8f0' width='80' height='50'/%3E%3C/svg%3E" alt="">
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Flowchart Panel -->
+        <div class="drawer-panel hidden" data-panel="flowchart">
+          <div class="flowchart-container">
+            <div class="empty-state">
+              <svg class="empty-icon" width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
+                <rect x="3" y="3" width="18" height="18" rx="2" ry="2"/>
+                <line x1="3" y1="9" x2="21" y2="9"/>
+                <line x1="9" y1="21" x2="9" y2="9"/>
+              </svg>
+              <p>React Flow Flowchart</p>
+              <p style="font-size: var(--font-size-xs);">Interactive flowchart will render here</p>
+            </div>
+          </div>
+        </div>
+
+        <!-- Logs Panel -->
+        <div class="drawer-panel hidden" data-panel="logs">
+          <div class="log-filters">
+            <button class="log-filter active" data-level="all">All</button>
+            <button class="log-filter" data-level="info">Info</button>
+            <button class="log-filter" data-level="debug">Debug</button>
+            <button class="log-filter" data-level="warning">Warning</button>
+            <button class="log-filter" data-level="error">Error</button>
+          </div>
+          <div class="logs-container" id="logs-content">
+            <div class="log-entry">
+              <span class="log-time">14:32:05</span>
+              <span class="log-level info">INFO</span>
+              <span class="log-message">Workflow initialized</span>
+            </div>
+            <div class="log-entry">
+              <span class="log-time">14:32:05</span>
+              <span class="log-level debug">DEBUG</span>
+              <span class="log-message">Loading configuration from workflow/main.ts</span>
+            </div>
+            <div class="log-entry">
+              <span class="log-time">14:32:06</span>
+              <span class="log-level info">INFO</span>
+              <span class="log-message">Model: gemini-2.5-flash, Temperature: 0.1</span>
+            </div>
+            <div class="log-entry">
+              <span class="log-time">14:32:06</span>
+              <span class="log-level success">SUCCESS</span>
+              <span class="log-message">Video uploaded to Gemini File API</span>
+            </div>
+            <div class="log-entry">
+              <span class="log-time">14:32:08</span>
+              <span class="log-level info">INFO</span>
+              <span class="log-message">Running analysis...</span>
+            </div>
+          </div>
+        </div>
+
+        <!-- Diff Panel -->
+        <div class="drawer-panel hidden" data-panel="diff">
+          <div class="diff-container">
+            <div class="diff-header">
+              <span class="diff-file-name">workflow/prompts.ts</span>
+              <div class="diff-stats">
+                <span class="diff-stat-added">+12 lines</span>
+                <span class="diff-stat-removed">-3 lines</span>
+              </div>
+            </div>
+            <div class="diff-line">
+              <span class="diff-line-number">45</span>
+              <span class="diff-line-content">  enum: ['web_application', 'desktop_application', 'mobile_application']</span>
+            </div>
+            <div class="diff-line added">
+              <span class="diff-line-number">46</span>
+              <span class="diff-line-content">  'terminal', 'other'</span>
+            </div>
+            <div class="diff-line">
+              <span class="diff-line-number">47</span>
+              <span class="diff-line-content">},</span>
+            </div>
+            <div class="diff-line removed">
+              <span class="diff-line-number">48</span>
+              <span class="diff-line-content">url: { type: 'string' }</span>
+            </div>
+            <div class="diff-line added">
+              <span class="diff-line-number">48</span>
+              <span class="diff-line-content">url: { type: 'string', format: 'uri' }</span>
+            </div>
+            <div class="diff-line added">
+              <span class="diff-line-number">49</span>
+              <span class="diff-line-content">version: { type: 'string' }</span>
+            </div>
+          </div>
+        </div>
+      </div>
+    </aside>
+  </div>
+
+  <!-- Monaco Editor Loader -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/monaco-editor/0.44.0/min/vs/loader.min.js"></script>
+  <script src="js/editor.js"></script>
+  <script src="js/app.js"></script>
+</body>
+</html>

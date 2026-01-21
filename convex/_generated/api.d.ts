@@ -8,6 +8,7 @@
  * @module
  */
 
+import type * as analysisVersions from "../analysisVersions.js";
 import type * as analyze from "../analyze.js";
 import type * as apiLogs from "../apiLogs.js";
 import type * as boundingBoxOverlay from "../boundingBoxOverlay.js";
@@ -24,6 +25,7 @@ import type * as migrations from "../migrations.js";
 import type * as processDataHandler from "../processDataHandler.js";
 import type * as processes from "../processes.js";
 import type * as prompts from "../prompts.js";
+import type * as reanalyze from "../reanalyze.js";
 import type * as runWorkflow from "../runWorkflow.js";
 import type * as sensitiveInfoDetection from "../sensitiveInfoDetection.js";
 import type * as settings from "../settings.js";
@@ -42,6 +44,7 @@ import type {
 } from "convex/server";
 
 declare const fullApi: ApiFromModules<{
+  analysisVersions: typeof analysisVersions;
   analyze: typeof analyze;
   apiLogs: typeof apiLogs;
   boundingBoxOverlay: typeof boundingBoxOverlay;
@@ -58,6 +61,7 @@ declare const fullApi: ApiFromModules<{
   processDataHandler: typeof processDataHandler;
   processes: typeof processes;
   prompts: typeof prompts;
+  reanalyze: typeof reanalyze;
   runWorkflow: typeof runWorkflow;
   sensitiveInfoDetection: typeof sensitiveInfoDetection;
   settings: typeof settings;
