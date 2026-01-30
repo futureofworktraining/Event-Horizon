@@ -8,6 +8,7 @@
  * @module
  */
 
+import type * as analysisPrompts from "../analysisPrompts.js";
 import type * as analysisVersions from "../analysisVersions.js";
 import type * as analyze from "../analyze.js";
 import type * as apiLogs from "../apiLogs.js";
@@ -25,8 +26,13 @@ import type * as migrations from "../migrations.js";
 import type * as processDataHandler from "../processDataHandler.js";
 import type * as processes from "../processes.js";
 import type * as prompts from "../prompts.js";
+import type * as prompts_index from "../prompts/index.js";
+import type * as prompts_jsonSchema from "../prompts/jsonSchema.js";
+import type * as prompts_systemPrompt from "../prompts/systemPrompt.js";
+import type * as prompts_userPrompt from "../prompts/userPrompt.js";
 import type * as reanalyze from "../reanalyze.js";
 import type * as runWorkflow from "../runWorkflow.js";
+import type * as seedPrompts from "../seedPrompts.js";
 import type * as sensitiveInfoDetection from "../sensitiveInfoDetection.js";
 import type * as settings from "../settings.js";
 import type * as settingsActions from "../settingsActions.js";
@@ -44,6 +50,7 @@ import type {
 } from "convex/server";
 
 declare const fullApi: ApiFromModules<{
+  analysisPrompts: typeof analysisPrompts;
   analysisVersions: typeof analysisVersions;
   analyze: typeof analyze;
   apiLogs: typeof apiLogs;
@@ -61,8 +68,13 @@ declare const fullApi: ApiFromModules<{
   processDataHandler: typeof processDataHandler;
   processes: typeof processes;
   prompts: typeof prompts;
+  "prompts/index": typeof prompts_index;
+  "prompts/jsonSchema": typeof prompts_jsonSchema;
+  "prompts/systemPrompt": typeof prompts_systemPrompt;
+  "prompts/userPrompt": typeof prompts_userPrompt;
   reanalyze: typeof reanalyze;
   runWorkflow: typeof runWorkflow;
+  seedPrompts: typeof seedPrompts;
   sensitiveInfoDetection: typeof sensitiveInfoDetection;
   settings: typeof settings;
   settingsActions: typeof settingsActions;

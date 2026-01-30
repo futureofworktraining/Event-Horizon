@@ -1,6 +1,14 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
-import { query, mutation } from "./_generated/server";
+import { query, mutation, internalQuery } from "./_generated/server";
 import { v } from "convex/values";
+
+// Internal query for use in actions (like analyze.ts)
+export const getProcessInternal = internalQuery({
+  args: { processId: v.id("processes") },
+  handler: async (ctx, args) => {
+    return await ctx.db.get(args.processId);
+  },
+});
 
 // Get a single process by ID with job information and steps
 export const getProcess = query({
@@ -275,6 +283,10 @@ async function getProcessPromptsHandler(ctx: any, args: { processId: any }) {
     processId: args.processId,
     sensitiveInfoPrompt: sensitiveInfoPrompt ?? null,
     boundingBoxPrompt: boundingBoxPrompt ?? null,
+    // Analysis prompt IDs
+    systemPromptId: currentProcess.systemPromptId ?? null,
+    userPromptId: currentProcess.userPromptId ?? null,
+    jsonSchemaId: currentProcess.jsonSchemaId ?? null,
   };
 }
 
@@ -326,5 +338,103 @@ export const updateBoundingBoxPrompt = mutation({
     });
 
     return { success: true };
+  },
+});
+
+// Mutation to set analysis prompts for a process (for re-analysis)
+export const setProcessPrompts = mutation({
+  args: {
+    processId: v.id("processes"),
+    systemPromptId: v.id("systemPrompts"),
+    userPromptId: v.id("userPrompts"),
+    jsonSchemaId: v.id("jsonSchemas"),
+  },
+  handler: async (ctx, args) => {
+    const process = await ctx.db.get(args.processId);
+    if (!process) {
+      throw new Error("Process not found");
+    }
+
+    await ctx.db.patch(args.processId, {
+      systemPromptId: args.systemPromptId,
+      userPromptId: args.userPromptId,
+      jsonSchemaId: args.jsonSchemaId,
+    });
+
+    return { success: true };
+  },
+});
+
+// ============================================
+// PROMPT CONFIGURATION
+// ============================================
+
+/**
+ * Set the prompt configuration for a process
+ * Used when user selects a different prompt from the dropdown on the process page
+ * before re-analyzing
+ */
+export const setPromptConfiguration = mutation({
+  args: {
+    processId: v.id("processes"),
+    promptConfigurationId: v.union(v.id("promptConfigurations"), v.null()),
+  },
+  handler: async (ctx, args) => {
+    const process = await ctx.db.get(args.processId);
+    if (!process) {
+      throw new Error("Process not found");
+    }
+
+    // Verify the prompt configuration exists (if not null)
+    if (args.promptConfigurationId) {
+      const config = await ctx.db.get(args.promptConfigurationId);
+      if (!config) {
+        throw new Error("Prompt configuration not found");
+      }
+      if (!config.isActive) {
+        throw new Error("Prompt configuration is not active");
+      }
+    }
+
+    await ctx.db.patch(args.processId, {
+      promptConfigurationId: args.promptConfigurationId ?? undefined,
+    });
+
+    return { success: true };
+  },
+});
+
+/**
+ * Get the prompt configuration for a process
+ * Returns null if process uses the default configuration
+ */
+export const getPromptConfiguration = query({
+  args: { processId: v.id("processes") },
+  handler: async (ctx, args) => {
+    const process = await ctx.db.get(args.processId);
+    if (!process) {
+      return null;
+    }
+
+    if (!process.promptConfigurationId) {
+      return null; // Using default
+    }
+
+    const config = await ctx.db.get(process.promptConfigurationId);
+    if (!config) {
+      return null;
+    }
+
+    // Resolve the referenced prompts
+    const systemPrompt = await ctx.db.get(config.systemPromptId);
+    const userPrompt = await ctx.db.get(config.userPromptId);
+    const jsonSchema = await ctx.db.get(config.jsonSchemaId);
+
+    return {
+      ...config,
+      systemPrompt,
+      userPrompt,
+      jsonSchema,
+    };
   },
 });

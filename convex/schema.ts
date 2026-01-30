@@ -365,6 +365,14 @@ export default defineSchema({
     uiElementDetectionModel: v.optional(v.string()), // Model for UI element detection (default: gemini-2.5-flash)
     sensitiveInfoDetectionModel: v.optional(v.string()), // Model for sensitive info detection (default: gemini-2.5-flash)
 
+    // NEW: Prompt configuration for analysis (null = use default from settings)
+    promptConfigurationId: v.optional(v.id("promptConfigurations")),
+
+    // NEW: Individual prompt IDs for re-analysis (overrides promptConfigurationId)
+    systemPromptId: v.optional(v.id("systemPrompts")),
+    userPromptId: v.optional(v.id("userPrompts")),
+    jsonSchemaId: v.optional(v.id("jsonSchemas")),
+
     // DEPRECATED: Old schema had embedded steps - kept for backward compatibility during migration
     steps: v.optional(v.any()),
   })
@@ -600,6 +608,101 @@ export default defineSchema({
     .index("by_job", ["jobId"])
     .index("by_job_version", ["jobId", "versionNumber"])
     .index("by_job_current", ["jobId", "isCurrent"]),
+
+  // ============================================
+  // PROMPT MANAGEMENT TABLES
+  // ============================================
+
+  // System Prompts table - versioned system prompts for AI analysis
+  systemPrompts: defineTable({
+    version: v.string(),              // "v1", "v2", "v3"
+    versionNumber: v.number(),        // 1, 2, 3 for sorting
+    name: v.string(),                 // "Linear Analysis System Prompt V1"
+    description: v.optional(v.string()),
+    content: v.string(),              // The actual system prompt text
+
+    isActive: v.boolean(),            // Soft delete flag
+    isDefault: v.optional(v.boolean()), // Is this the default system prompt
+    source: v.union(
+      v.literal("builtin"),           // Seeded from file backup
+      v.literal("custom")             // User-created
+    ),
+
+    createdAt: v.number(),
+    updatedAt: v.optional(v.number()),
+  })
+    .index("by_version", ["version"])
+    .index("by_active", ["isActive"])
+    .index("by_version_number", ["versionNumber"])
+    .index("by_default", ["isDefault"]),
+
+  // User Prompts table - versioned user prompts for AI analysis
+  userPrompts: defineTable({
+    version: v.string(),
+    versionNumber: v.number(),
+    name: v.string(),
+    description: v.optional(v.string()),
+    content: v.string(),              // The actual user prompt text
+
+    isActive: v.boolean(),
+    isDefault: v.optional(v.boolean()), // Is this the default user prompt
+    source: v.union(
+      v.literal("builtin"),
+      v.literal("custom")
+    ),
+
+    createdAt: v.number(),
+    updatedAt: v.optional(v.number()),
+  })
+    .index("by_version", ["version"])
+    .index("by_active", ["isActive"])
+    .index("by_version_number", ["versionNumber"])
+    .index("by_default", ["isDefault"]),
+
+  // JSON Schemas table - versioned output schemas for AI analysis
+  jsonSchemas: defineTable({
+    version: v.string(),
+    versionNumber: v.number(),
+    name: v.string(),
+    description: v.optional(v.string()),
+    content: v.string(),              // JSON schema as string
+
+    isActive: v.boolean(),
+    isDefault: v.optional(v.boolean()), // Is this the default schema
+    source: v.union(
+      v.literal("builtin"),
+      v.literal("custom")
+    ),
+
+    createdAt: v.number(),
+    updatedAt: v.optional(v.number()),
+  })
+    .index("by_version", ["version"])
+    .index("by_active", ["isActive"])
+    .index("by_version_number", ["versionNumber"])
+    .index("by_default", ["isDefault"]),
+
+  // Prompt Configurations table - combines system prompt + user prompt + schema
+  promptConfigurations: defineTable({
+    name: v.string(),                          // "Flowchart Analysis V2"
+    description: v.optional(v.string()),
+
+    systemPromptId: v.id("systemPrompts"),
+    userPromptId: v.id("userPrompts"),
+    jsonSchemaId: v.id("jsonSchemas"),
+
+    isDefault: v.boolean(),                    // Is this the default for new uploads
+    isActive: v.boolean(),                     // Soft delete flag
+    source: v.union(
+      v.literal("builtin"),
+      v.literal("custom")
+    ),
+
+    createdAt: v.number(),
+    updatedAt: v.optional(v.number()),
+  })
+    .index("by_default", ["isDefault"])
+    .index("by_active", ["isActive"]),
 });
 
 // Export validators for use in other files

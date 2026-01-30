@@ -182,7 +182,7 @@ export function PddGenerationToast({ jobId }: PddGenerationToastProps) {
             {/* Progress bar */}
             <div className="space-y-1">
               <div className="flex justify-between text-xs text-muted-foreground">
-                <span>Generating PDD</span>
+                <span>Analyzing Process</span>
                 <span>{Math.round(progress)}%</span>
               </div>
               <div className="w-full h-2 bg-muted rounded-full overflow-hidden">
@@ -203,7 +203,7 @@ export function PddGenerationToast({ jobId }: PddGenerationToastProps) {
             {/* Success message */}
             {phase === "complete" && (
               <div className="text-xs text-green-600">
-                Process Design Document generated successfully!
+                Process analysis completed successfully!
               </div>
             )}
 

@@ -3,7 +3,8 @@ import { useMutation } from "convex/react";
 import { useState } from "react";
 import { api } from "../../../convex/_generated/api";
 import { Button } from "@/components/ui/button";
-import { FileText, Clock, CheckCircle2, ArrowRight, Loader2, AlertCircle, Trash2 } from "lucide-react";
+import { Input } from "@/components/ui/input";
+import { FileText, Clock, CheckCircle2, ArrowRight, Loader2, AlertCircle, Trash2, Pencil } from "lucide-react";
 import Link from "next/link";
 import {
     Dialog,
@@ -44,8 +45,12 @@ function StatusBadge({ status }: { status: string }) {
 
 export function ProjectCard({ job, isCompleted }: { job: any, isCompleted: boolean }) {
     const deleteJob = useMutation(api.jobs.deleteJob);
+    const updateJob = useMutation(api.jobs.updateJob);
     const [isDeleting, setIsDeleting] = useState(false);
     const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
+    const [isRenameDialogOpen, setIsRenameDialogOpen] = useState(false);
+    const [newName, setNewName] = useState(job.fileName);
+    const [isRenaming, setIsRenaming] = useState(false);
 
     const handleDelete = async () => {
         try {
@@ -60,10 +65,34 @@ export function ProjectCard({ job, isCompleted }: { job: any, isCompleted: boole
         }
     };
 
+    const handleRename = async () => {
+        if (!newName.trim() || newName === job.fileName) {
+            setIsRenameDialogOpen(false);
+            return;
+        }
+        try {
+            setIsRenaming(true);
+            await updateJob({ jobId: job._id, fileName: newName.trim() });
+            setIsRenameDialogOpen(false);
+        } catch (error) {
+            console.error("Failed to rename project:", error);
+            alert("Failed to rename project");
+        } finally {
+            setIsRenaming(false);
+        }
+    };
+
     const handleOpenDeleteDialog = (e: React.MouseEvent) => {
         e.preventDefault();
         e.stopPropagation();
         setIsDeleteDialogOpen(true);
+    };
+
+    const handleOpenRenameDialog = (e: React.MouseEvent) => {
+        e.preventDefault();
+        e.stopPropagation();
+        setNewName(job.fileName);
+        setIsRenameDialogOpen(true);
     };
 
     const content = (
@@ -84,16 +113,26 @@ export function ProjectCard({ job, isCompleted }: { job: any, isCompleted: boole
                 </div>
             </div>
 
-            <div className="flex items-center gap-2">
+            <div className="flex items-center gap-1">
                 {isCompleted && (
-                    <ArrowRight className="w-4 h-4 text-muted-foreground opacity-0 group-hover:opacity-100 transition-opacity" />
+                    <ArrowRight className="w-4 h-4 text-muted-foreground opacity-0 group-hover:opacity-100 transition-opacity mr-1" />
                 )}
                 <Button
                     variant="ghost"
                     size="icon"
-                    className="h-8 w-8 text-muted-foreground hover:text-red-600 hover:bg-red-50 -mr-2"
+                    className="h-8 w-8 text-muted-foreground hover:text-violet-600 hover:bg-violet-50"
+                    onClick={handleOpenRenameDialog}
+                    title="Rename project"
+                >
+                    <Pencil className="w-4 h-4" />
+                </Button>
+                <Button
+                    variant="ghost"
+                    size="icon"
+                    className="h-8 w-8 text-muted-foreground hover:text-red-600 hover:bg-red-50"
                     onClick={handleOpenDeleteDialog}
                     disabled={isDeleting}
+                    title="Delete project"
                 >
                     {isDeleting ? (
                         <Loader2 className="w-4 h-4 animate-spin" />
@@ -103,6 +142,57 @@ export function ProjectCard({ job, isCompleted }: { job: any, isCompleted: boole
                 </Button>
             </div>
         </div>
+    );
+
+    const renameDialog = (
+        <Dialog open={isRenameDialogOpen} onOpenChange={setIsRenameDialogOpen}>
+            <DialogContent className="sm:max-w-[425px]">
+                <DialogHeader>
+                    <DialogTitle className="flex items-center gap-2">
+                        <Pencil className="w-5 h-5 text-violet-600" />
+                        Rename Project
+                    </DialogTitle>
+                    <DialogDescription className="py-2">
+                        Enter a new name for this project.
+                    </DialogDescription>
+                </DialogHeader>
+                <div className="py-4">
+                    <Input
+                        value={newName}
+                        onChange={(e) => setNewName(e.target.value)}
+                        placeholder="Project name"
+                        className="w-full"
+                        autoFocus
+                        onKeyDown={(e) => {
+                            if (e.key === "Enter" && newName.trim()) {
+                                handleRename();
+                            }
+                        }}
+                    />
+                </div>
+                <DialogFooter className="gap-3">
+                    <Button
+                        variant="outline"
+                        onClick={() => setIsRenameDialogOpen(false)}
+                    >
+                        Cancel
+                    </Button>
+                    <Button
+                        onClick={handleRename}
+                        disabled={!newName.trim() || isRenaming}
+                    >
+                        {isRenaming ? (
+                            <>
+                                <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                                Renaming...
+                            </>
+                        ) : (
+                            "Rename"
+                        )}
+                    </Button>
+                </DialogFooter>
+            </DialogContent>
+        </Dialog>
     );
 
     if (isCompleted) {
@@ -145,6 +235,7 @@ export function ProjectCard({ job, isCompleted }: { job: any, isCompleted: boole
                         </DialogFooter>
                     </DialogContent>
                 </Dialog>
+                {renameDialog}
             </>
         );
     }
@@ -185,6 +276,7 @@ export function ProjectCard({ job, isCompleted }: { job: any, isCompleted: boole
                     </DialogFooter>
                 </DialogContent>
             </Dialog>
+            {renameDialog}
         </>
     );
 }

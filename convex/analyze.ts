@@ -12,8 +12,8 @@ import { action, ActionCtx } from "./_generated/server";
 import { internal } from "./_generated/api";
 import { Id } from "./_generated/dataModel";
 
-// Prompts and schemas
-import { SYSTEM_PROMPT_V2, USER_PROMPT_V2, JSON_SCHEMA_V2 } from "./prompts";
+// NOTE: File-based prompts are kept as backup only - all runtime prompts come from database
+// import { SYSTEM_PROMPT_V1, USER_PROMPT_V1, JSON_SCHEMA_V1 } from "./prompts"; // Backup only
 
 // Types
 import { PDDAnalysisResultV2 } from "./types";
@@ -150,28 +150,92 @@ export const analyzeVideo = action({
       // ========================================
       await updateProgress(ctx, args.jobId, 45);
 
-      // Get custom prompts and model from database (or use defaults)
-      const customPrompts = await ctx.runQuery(internal.settings.getAnalysisPromptsInternal);
+      // Get prompts from database
+      // Priority: 1) Individual prompt IDs on process, 2) prompt configuration, 3) defaults
+      let systemPromptContent: string | null = null;
+      let userPromptContent: string | null = null;
+      let jsonSchemaContent: string | null = null;
 
-      const systemPrompt = customPrompts.systemPrompt || SYSTEM_PROMPT_V2;
-      const userPrompt = customPrompts.userPrompt || USER_PROMPT_V2;
-      const selectedModel = customPrompts.model || "gemini-3-flash-preview";
+      // Check if this is a re-analysis (job already has a processId)
+      if (job?.processId) {
+        const existingProcess = await ctx.runQuery(internal.processes.getProcessInternal, {
+          processId: job.processId,
+        });
 
-      // Parse custom schema if provided, otherwise use default
-      let responseSchema = JSON_SCHEMA_V2;
-      if (customPrompts.schema) {
-        try {
-          responseSchema = JSON.parse(customPrompts.schema);
-          console.log("Using custom JSON schema from settings");
-        } catch (schemaError) {
-          console.warn("Failed to parse custom schema, using default:", schemaError);
+        // First priority: Individual prompt IDs on the process
+        if (existingProcess?.systemPromptId) {
+          const sysPrompt = await ctx.runQuery(internal.analysisPrompts.getSystemPromptInternal, {
+            id: existingProcess.systemPromptId,
+          });
+          if (sysPrompt) systemPromptContent = sysPrompt.content;
+        }
+        if (existingProcess?.userPromptId) {
+          const usrPrompt = await ctx.runQuery(internal.analysisPrompts.getUserPromptInternal, {
+            id: existingProcess.userPromptId,
+          });
+          if (usrPrompt) userPromptContent = usrPrompt.content;
+        }
+        if (existingProcess?.jsonSchemaId) {
+          const schema = await ctx.runQuery(internal.analysisPrompts.getJsonSchemaInternal, {
+            id: existingProcess.jsonSchemaId,
+          });
+          if (schema) jsonSchemaContent = schema.content;
+        }
+
+        // Second priority: Prompt configuration ID on the process
+        if ((!systemPromptContent || !userPromptContent || !jsonSchemaContent) && existingProcess?.promptConfigurationId) {
+          const promptConfig = await ctx.runQuery(
+            internal.analysisPrompts.getPromptConfigurationInternal,
+            { id: existingProcess.promptConfigurationId }
+          );
+          if (promptConfig) {
+            if (!systemPromptContent && promptConfig.systemPrompt) systemPromptContent = promptConfig.systemPrompt.content;
+            if (!userPromptContent && promptConfig.userPrompt) userPromptContent = promptConfig.userPrompt.content;
+            if (!jsonSchemaContent && promptConfig.jsonSchema) jsonSchemaContent = promptConfig.jsonSchema.content;
+          }
         }
       }
+
+      // Third priority: Get defaults if still missing
+      if (!systemPromptContent || !userPromptContent || !jsonSchemaContent) {
+        const defaultConfig = await ctx.runQuery(
+          internal.analysisPrompts.getDefaultPromptConfigurationInternal
+        );
+        if (defaultConfig) {
+          if (!systemPromptContent && defaultConfig.systemPrompt) systemPromptContent = defaultConfig.systemPrompt.content;
+          if (!userPromptContent && defaultConfig.userPrompt) userPromptContent = defaultConfig.userPrompt.content;
+          if (!jsonSchemaContent && defaultConfig.jsonSchema) jsonSchemaContent = defaultConfig.jsonSchema.content;
+        }
+      }
+
+      if (!systemPromptContent || !userPromptContent || !jsonSchemaContent) {
+        throw new Error(
+          "No prompts found. Please run seedBuiltinPrompts to initialize the database."
+        );
+      }
+
+      console.log("Using prompts for analysis");
+
+      const systemPrompt = systemPromptContent;
+      const userPrompt = userPromptContent;
+
+      // Parse JSON schema from database
+      let responseSchema;
+      try {
+        responseSchema = JSON.parse(jsonSchemaContent);
+      } catch (schemaError) {
+        throw new Error(`Failed to parse JSON schema from database: ${schemaError}`);
+      }
+
+      // Get model from settings (model selection is separate from prompt configuration)
+      const modelSetting = await ctx.runQuery(internal.settings.getSettingInternal, {
+        key: "analysis_model",
+      });
+      const selectedModel = modelSetting?.value || "gemini-3-flash-preview";
 
       const fullPrompt = `${systemPrompt}\n\n${userPrompt}`;
 
       console.log("Using model:", selectedModel);
-      console.log("Using custom prompts:", !!customPrompts.systemPrompt || !!customPrompts.userPrompt);
       console.log("Calling Gemini API for video analysis...");
 
       const startTime = Date.now();
