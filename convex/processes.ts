@@ -341,7 +341,7 @@ export const updateBoundingBoxPrompt = mutation({
   },
 });
 
-// Mutation to set analysis prompts for a process (for re-analysis)
+// Mutation to set analysis prompts for a process (for re-analysis) - LEGACY
 export const setProcessPrompts = mutation({
   args: {
     processId: v.id("processes"),
@@ -362,6 +362,133 @@ export const setProcessPrompts = mutation({
     });
 
     return { success: true };
+  },
+});
+
+// ============================================
+// UNIFIED PROMPT MANAGEMENT
+// ============================================
+
+/**
+ * Set unified analysis prompts for a process (new system)
+ */
+export const setUnifiedProcessPrompts = mutation({
+  args: {
+    processId: v.id("processes"),
+    systemPromptId: v.id("prompts"),
+    userPromptId: v.id("prompts"),
+    schemaId: v.id("prompts"),
+  },
+  handler: async (ctx, args) => {
+    const process = await ctx.db.get(args.processId);
+    if (!process) {
+      throw new Error("Process not found");
+    }
+
+    await ctx.db.patch(args.processId, {
+      unifiedSystemPromptId: args.systemPromptId,
+      unifiedUserPromptId: args.userPromptId,
+      unifiedSchemaId: args.schemaId,
+    });
+
+    return { success: true };
+  },
+});
+
+/**
+ * Set UI element detection prompt for a process
+ */
+export const setUiElementPrompt = mutation({
+  args: {
+    processId: v.id("processes"),
+    promptId: v.union(v.id("prompts"), v.null()),
+  },
+  handler: async (ctx, args) => {
+    const process = await ctx.db.get(args.processId);
+    if (!process) {
+      throw new Error("Process not found");
+    }
+
+    // Verify prompt exists and is correct type
+    if (args.promptId) {
+      const prompt = await ctx.db.get(args.promptId);
+      if (!prompt) {
+        throw new Error("Prompt not found");
+      }
+      if (prompt.type !== "ui_element") {
+        throw new Error("Prompt must be of type 'ui_element'");
+      }
+    }
+
+    await ctx.db.patch(args.processId, {
+      uiElementPromptId: args.promptId ?? undefined,
+    });
+
+    return { success: true };
+  },
+});
+
+/**
+ * Set sensitive info detection prompt for a process
+ */
+export const setSensitiveInfoPrompt = mutation({
+  args: {
+    processId: v.id("processes"),
+    promptId: v.union(v.id("prompts"), v.null()),
+  },
+  handler: async (ctx, args) => {
+    const process = await ctx.db.get(args.processId);
+    if (!process) {
+      throw new Error("Process not found");
+    }
+
+    // Verify prompt exists and is correct type
+    if (args.promptId) {
+      const prompt = await ctx.db.get(args.promptId);
+      if (!prompt) {
+        throw new Error("Prompt not found");
+      }
+      if (prompt.type !== "sensitive_info") {
+        throw new Error("Prompt must be of type 'sensitive_info'");
+      }
+    }
+
+    await ctx.db.patch(args.processId, {
+      sensitiveInfoPromptId: args.promptId ?? undefined,
+    });
+
+    return { success: true };
+  },
+});
+
+/**
+ * Get all prompt selections for a process (unified system)
+ */
+export const getUnifiedProcessPrompts = query({
+  args: { processId: v.id("processes") },
+  handler: async (ctx, args) => {
+    const process = await ctx.db.get(args.processId);
+    if (!process) {
+      return null;
+    }
+
+    return {
+      processId: args.processId,
+      // Analysis prompts (unified)
+      unifiedSystemPromptId: process.unifiedSystemPromptId ?? null,
+      unifiedUserPromptId: process.unifiedUserPromptId ?? null,
+      unifiedSchemaId: process.unifiedSchemaId ?? null,
+      // Detection prompts
+      uiElementPromptId: process.uiElementPromptId ?? null,
+      sensitiveInfoPromptId: process.sensitiveInfoPromptId ?? null,
+      // Legacy prompts
+      systemPromptId: process.systemPromptId ?? null,
+      userPromptId: process.userPromptId ?? null,
+      jsonSchemaId: process.jsonSchemaId ?? null,
+      // User definition (not a prompt selection)
+      sensitiveInfoUserDefinition: process.sensitiveInfoPrompt ?? null,
+      boundingBoxCustomInstructions: process.boundingBoxPrompt ?? null,
+    };
   },
 });
 

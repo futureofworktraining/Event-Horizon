@@ -8,6 +8,7 @@ import { Header } from "@/components/Header";
 import { Toaster } from "@/components/ui/sonner";
 import { ExportProvider } from "@/contexts/ExportContext";
 import { ExportProgressToast } from "@/components/pdd/ExportProgressToast";
+import { FloatingNavigation } from "@/components/FloatingNavigation";
 
 const geistSans = Geist({
   variable: "--font-geist-sans",
@@ -58,6 +59,7 @@ export default function RootLayout({
             <Toaster />
             {/* Global export progress toast - persists across navigation */}
             <ExportProgressToast />
+            <FloatingNavigation />
           </ExportProvider>
         </ConvexClientProvider>
       </body>

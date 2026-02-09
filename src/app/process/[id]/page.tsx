@@ -13,6 +13,7 @@ import { ScreenshotExtractor } from "@/components/pdd/ScreenshotExtractor";
 import { BoundingBoxDetector } from "@/components/pdd/BoundingBoxDetector";
 import { SensitiveInfoDetector } from "@/components/pdd/SensitiveInfoDetector";
 import { AnalysisPromptEditor } from "@/components/pdd/AnalysisPromptEditor";
+import { DetectionPromptEditor } from "@/components/pdd/DetectionPromptEditor";
 import { AutoProcessingOrchestrator } from "@/components/pdd/AutoProcessingOrchestrator";
 import { PddGenerationToast } from "@/components/pdd/PddGenerationToast";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -59,6 +60,7 @@ export default function ProcessPage() {
   const [showBoundingBoxSection, setShowBoundingBoxSection] = useState(false);
   const [showSensitiveInfoSection, setShowSensitiveInfoSection] = useState(false);
   const [showPromptSection, setShowPromptSection] = useState(false);
+  const [showDetectionPromptSection, setShowDetectionPromptSection] = useState(false);
 
   // Re-analyze state
   const [isReanalyzing, setIsReanalyzing] = useState(false);
@@ -117,7 +119,7 @@ export default function ProcessPage() {
   );
 
   // Check if re-analysis is in progress (job processing but has existing process data)
-  const isReanalysisInProgress = process?.job?.status === "processing" && process?.processName;
+  const isReanalysisInProgress = process?.job?.status === "processing" && !!process?.processName;
 
   // Check if this is the main process (not a subprocess)
   const isMainProcess = process?.isMainProcess !== false && !process?.parentProcessId;
@@ -539,7 +541,31 @@ export default function ProcessPage() {
                 </button>
                 {showPromptSection && (
                   <div className="p-4 border-t bg-gray-50/50">
-                    <AnalysisPromptEditor jobId={process.job?._id} processId={process._id} />
+                    <AnalysisPromptEditor processId={process._id} />
+                  </div>
+                )}
+              </div>
+
+              {/* Detection Prompt Editor - Collapsible */}
+              <div className="border rounded-lg">
+                <button
+                  onClick={() => setShowDetectionPromptSection(!showDetectionPromptSection)}
+                  className="w-full flex items-center justify-between p-3 hover:bg-muted/50 transition-colors"
+                >
+                  <div className="flex items-center gap-2">
+                    <Target className="w-4 h-4 text-orange-600" />
+                    <span className="font-medium">Detection Prompts</span>
+                    <span className="text-xs text-muted-foreground">(UI Element & Sensitive Info)</span>
+                  </div>
+                  {showDetectionPromptSection ? (
+                    <ChevronUp className="w-4 h-4" />
+                  ) : (
+                    <ChevronDown className="w-4 h-4" />
+                  )}
+                </button>
+                {showDetectionPromptSection && (
+                  <div className="p-4 border-t bg-gray-50/50">
+                    <DetectionPromptEditor processId={process._id} />
                   </div>
                 )}
               </div>

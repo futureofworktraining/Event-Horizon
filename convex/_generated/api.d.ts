@@ -41,6 +41,7 @@ import type * as stepsActions from "../stepsActions.js";
 import type * as testAction from "../testAction.js";
 import type * as testQuery from "../testQuery.js";
 import type * as types from "../types.js";
+import type * as unifiedPrompts from "../unifiedPrompts.js";
 import type * as workflows from "../workflows.js";
 
 import type {
@@ -83,6 +84,7 @@ declare const fullApi: ApiFromModules<{
   testAction: typeof testAction;
   testQuery: typeof testQuery;
   types: typeof types;
+  unifiedPrompts: typeof unifiedPrompts;
   workflows: typeof workflows;
 }>;
 

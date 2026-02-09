@@ -2,6 +2,7 @@
 
 # dependencies
 /node_modules
+/Agentic_Approach/bun-agent/node_modules
 /.pnp
 .pnp.*
 .yarn/*

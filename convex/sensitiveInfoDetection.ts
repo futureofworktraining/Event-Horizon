@@ -15,18 +15,14 @@ interface SensitiveInfoBox {
   confidence?: number;
 }
 
-// Build prompt for detecting sensitive information in screenshots
-function buildSensitiveDetectionPrompt(
-  userDefinition: string,
-  stepDescription: string
-): string {
-  return `You are a sensitive information detector for RPA documentation.
+// Default prompt template (used when no custom prompt is configured)
+const DEFAULT_SENSITIVE_INFO_PROMPT_TEMPLATE = `You are a sensitive information detector for RPA documentation.
 
 USER'S SENSITIVE INFO DEFINITION:
-${userDefinition}
+{userDefinition}
 
 STEP CONTEXT:
-${stepDescription}
+{stepDescription}
 
 TASK: Find ALL instances of sensitive information matching the definition above in this screenshot.
 For EACH instance found, return a bounding box with:
@@ -42,12 +38,6 @@ Return a JSON object:
       "box_2d": [100, 200, 150, 400],
       "found": true,
       "confidence": 0.95
-    },
-    {
-      "label": "Credit Card Number",
-      "box_2d": [300, 100, 350, 600],
-      "found": true,
-      "confidence": 0.92
     }
   ]
 }
@@ -56,6 +46,22 @@ If no sensitive information found, return:
 {"sensitive_boxes": []}
 
 Return ONLY the JSON object, no other text or markdown formatting.`;
+
+// Build prompt for detecting sensitive information in screenshots
+function buildSensitiveDetectionPrompt(
+  userDefinition: string,
+  stepDescription: string,
+  basePromptTemplate?: string
+): string {
+  // Use provided template or default
+  let prompt = basePromptTemplate || DEFAULT_SENSITIVE_INFO_PROMPT_TEMPLATE;
+
+  // Replace placeholders with actual values
+  prompt = prompt
+    .replace(/\{userDefinition\}/g, userDefinition)
+    .replace(/\{stepDescription\}/g, stepDescription);
+
+  return prompt;
 }
 
 // Public action to detect sensitive information for all steps in a process
@@ -92,8 +98,8 @@ export const detectSensitiveInformation = action({
       };
     }
 
-    // Use provided prompt or saved prompt from process
-    const userPrompt = args.customPrompt || processData.sensitiveInfoPrompt;
+    // Use provided prompt or saved prompt from process (this is the user's definition of what to look for)
+    const userDefinition = args.customPrompt || processData.sensitiveInfoPrompt;
 
     // Get API key from database (encrypted)
     let apiKey: string | null = null;
@@ -120,7 +126,7 @@ export const detectSensitiveInformation = action({
       };
     }
 
-    if (!userPrompt) {
+    if (!userDefinition) {
       return {
         success: false,
         processed: 0,
@@ -129,6 +135,29 @@ export const detectSensitiveInformation = action({
         total: 0,
         errors: ["No sensitive information prompt defined for this process"],
       };
+    }
+
+    // Get the base prompt template from database
+    // Priority: process.sensitiveInfoPromptId -> default from unified prompts table
+    let basePromptTemplate: string | undefined;
+
+    if (processData.sensitiveInfoPromptId) {
+      const promptDoc = await ctx.runQuery(internal.unifiedPrompts.getPromptInternal, {
+        id: processData.sensitiveInfoPromptId,
+      });
+      if (promptDoc) {
+        basePromptTemplate = promptDoc.content;
+      }
+    }
+
+    // Fallback to default
+    if (!basePromptTemplate) {
+      const defaultPrompt = await ctx.runQuery(internal.unifiedPrompts.getDefaultPromptInternal, {
+        type: "sensitive_info",
+      });
+      if (defaultPrompt) {
+        basePromptTemplate = defaultPrompt.content;
+      }
     }
 
     // Get all steps with screenshots
@@ -206,8 +235,9 @@ export const detectSensitiveInformation = action({
 
         // Build sensitive detection prompt
         const prompt = buildSensitiveDetectionPrompt(
-          userPrompt,
-          step.description
+          userDefinition,
+          step.description,
+          basePromptTemplate
         );
 
         // Generate sensitive information detection using Gemini 2.5 Flash
@@ -342,7 +372,7 @@ export const detectSensitiveInformation = action({
 export const detectSensitiveBoxesSingleStep = action({
   args: {
     stepId: v.id("steps"),
-    customPrompt: v.string(),
+    customPrompt: v.string(), // User's definition of what sensitive info to look for
   },
   handler: async (
     ctx,
@@ -375,6 +405,29 @@ export const detectSensitiveBoxesSingleStep = action({
 
     if (!step || !step.screenshotUrl) {
       return { success: false, boxes: [], error: "Step or screenshot not found" };
+    }
+
+    // Get the base prompt template from database
+    const process = await ctx.runQuery(api.processes.getProcess, { processId: step.processId });
+    let basePromptTemplate: string | undefined;
+
+    if (process?.sensitiveInfoPromptId) {
+      const promptDoc = await ctx.runQuery(internal.unifiedPrompts.getPromptInternal, {
+        id: process.sensitiveInfoPromptId,
+      });
+      if (promptDoc) {
+        basePromptTemplate = promptDoc.content;
+      }
+    }
+
+    // Fallback to default
+    if (!basePromptTemplate) {
+      const defaultPrompt = await ctx.runQuery(internal.unifiedPrompts.getDefaultPromptInternal, {
+        type: "sensitive_info",
+      });
+      if (defaultPrompt) {
+        basePromptTemplate = defaultPrompt.content;
+      }
     }
 
     try {
@@ -410,7 +463,8 @@ export const detectSensitiveBoxesSingleStep = action({
       // Build prompt
       const prompt = buildSensitiveDetectionPrompt(
         args.customPrompt,
-        step.description
+        step.description,
+        basePromptTemplate
       );
 
       // Call Gemini

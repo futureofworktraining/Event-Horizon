@@ -29,10 +29,10 @@ interface AnalysisPromptEditorProps {
 export function AnalysisPromptEditor({ processId, onApply }: AnalysisPromptEditorProps) {
   const [activeTab, setActiveTab] = useState<"system" | "user" | "schema">("system");
 
-  // Selected prompt IDs
-  const [selectedSystemId, setSelectedSystemId] = useState<Id<"systemPrompts"> | null>(null);
-  const [selectedUserId, setSelectedUserId] = useState<Id<"userPrompts"> | null>(null);
-  const [selectedSchemaId, setSelectedSchemaId] = useState<Id<"jsonSchemas"> | null>(null);
+  // Selected prompt IDs (unified prompts table)
+  const [selectedSystemId, setSelectedSystemId] = useState<Id<"prompts"> | null>(null);
+  const [selectedUserId, setSelectedUserId] = useState<Id<"prompts"> | null>(null);
+  const [selectedSchemaId, setSelectedSchemaId] = useState<Id<"prompts"> | null>(null);
   const [selectedModel, setSelectedModel] = useState("gemini-3-flash-preview");
 
   // Editing state for each tab
@@ -54,27 +54,23 @@ export function AnalysisPromptEditor({ processId, onApply }: AnalysisPromptEdito
   const [message, setMessage] = useState<{ type: "success" | "error"; text: string } | null>(null);
   const [schemaError, setSchemaError] = useState<string | null>(null);
 
-  // Queries
-  const systemPrompts = useQuery(api.analysisPrompts.listSystemPrompts);
-  const userPrompts = useQuery(api.analysisPrompts.listUserPrompts);
-  const jsonSchemas = useQuery(api.analysisPrompts.listJsonSchemas);
+  // Queries - using unified prompts table
+  const systemPrompts = useQuery(api.unifiedPrompts.listSystemPrompts);
+  const userPrompts = useQuery(api.unifiedPrompts.listUserPrompts);
+  const jsonSchemas = useQuery(api.unifiedPrompts.listSchemaPrompts);
   const models = useQuery(api.workflows.getAvailableModels);
   const savedModel = useQuery(api.settings.getSetting, { key: "analysis_model" });
 
-  // Get process current prompts
+  // Get process current prompts (unified)
   const processPrompts = useQuery(
-    api.processes.getProcessPrompts,
+    api.processes.getUnifiedProcessPrompts,
     processId ? { processId: processId as Id<"processes"> } : "skip"
   );
 
-  // Mutations
-  const createSystemPrompt = useMutation(api.analysisPrompts.createSystemPrompt);
-  const createUserPrompt = useMutation(api.analysisPrompts.createUserPrompt);
-  const createJsonSchema = useMutation(api.analysisPrompts.createJsonSchema);
-  const updateSystemPrompt = useMutation(api.analysisPrompts.updateSystemPrompt);
-  const updateUserPrompt = useMutation(api.analysisPrompts.updateUserPrompt);
-  const updateJsonSchema = useMutation(api.analysisPrompts.updateJsonSchema);
-  const setProcessPrompts = useMutation(api.processes.setProcessPrompts);
+  // Mutations - using unified prompts API
+  const createPrompt = useMutation(api.unifiedPrompts.createPrompt);
+  const updatePrompt = useMutation(api.unifiedPrompts.updatePrompt);
+  const setUnifiedProcessPrompts = useMutation(api.processes.setUnifiedProcessPrompts);
   const setSetting = useMutation(api.settings.setSetting);
 
   // Load model from settings
@@ -87,31 +83,32 @@ export function AnalysisPromptEditor({ processId, onApply }: AnalysisPromptEdito
   // Initialize selections from process or defaults
   useEffect(() => {
     if (processPrompts) {
-      if (processPrompts.systemPromptId) {
-        setSelectedSystemId(processPrompts.systemPromptId);
+      // Prefer unified prompt IDs
+      if (processPrompts.unifiedSystemPromptId) {
+        setSelectedSystemId(processPrompts.unifiedSystemPromptId);
       }
-      if (processPrompts.userPromptId) {
-        setSelectedUserId(processPrompts.userPromptId);
+      if (processPrompts.unifiedUserPromptId) {
+        setSelectedUserId(processPrompts.unifiedUserPromptId);
       }
-      if (processPrompts.jsonSchemaId) {
-        setSelectedSchemaId(processPrompts.jsonSchemaId);
-      }
-    } else {
-      // Set to defaults if available
-      if (systemPrompts?.length && !selectedSystemId) {
-        const defaultPrompt = systemPrompts.find(p => p.isDefault) || systemPrompts[0];
-        if (defaultPrompt) setSelectedSystemId(defaultPrompt._id);
-      }
-      if (userPrompts?.length && !selectedUserId) {
-        const defaultPrompt = userPrompts.find(p => p.isDefault) || userPrompts[0];
-        if (defaultPrompt) setSelectedUserId(defaultPrompt._id);
-      }
-      if (jsonSchemas?.length && !selectedSchemaId) {
-        const defaultSchema = jsonSchemas.find(s => s.isDefault) || jsonSchemas[0];
-        if (defaultSchema) setSelectedSchemaId(defaultSchema._id);
+      if (processPrompts.unifiedSchemaId) {
+        setSelectedSchemaId(processPrompts.unifiedSchemaId);
       }
     }
-  }, [processPrompts, systemPrompts, userPrompts, jsonSchemas]);
+
+    // Set to defaults if not yet selected
+    if (systemPrompts?.length && !selectedSystemId) {
+      const defaultPrompt = systemPrompts.find(p => p.isDefault) || systemPrompts[0];
+      if (defaultPrompt) setSelectedSystemId(defaultPrompt._id);
+    }
+    if (userPrompts?.length && !selectedUserId) {
+      const defaultPrompt = userPrompts.find(p => p.isDefault) || userPrompts[0];
+      if (defaultPrompt) setSelectedUserId(defaultPrompt._id);
+    }
+    if (jsonSchemas?.length && !selectedSchemaId) {
+      const defaultSchema = jsonSchemas.find(s => s.isDefault) || jsonSchemas[0];
+      if (defaultSchema) setSelectedSchemaId(defaultSchema._id);
+    }
+  }, [processPrompts, systemPrompts, userPrompts, jsonSchemas, selectedSystemId, selectedUserId, selectedSchemaId]);
 
   // Load system prompt content when selected
   useEffect(() => {
@@ -194,6 +191,7 @@ export function AnalysisPromptEditor({ processId, onApply }: AnalysisPromptEdito
     const name = activeTab === "system" ? systemName : activeTab === "user" ? userName : schemaName;
     const content = activeTab === "system" ? systemContent : activeTab === "user" ? userContent : schemaContent;
     const version = activeTab === "system" ? systemVersion : activeTab === "user" ? userVersion : schemaVersion;
+    const promptType = activeTab === "system" ? "system" : activeTab === "user" ? "user" : "schema";
 
     if (!name.trim() || !content.trim()) {
       setMessage({ type: "error", text: "Name and content are required" });
@@ -209,33 +207,32 @@ export function AnalysisPromptEditor({ processId, onApply }: AnalysisPromptEdito
 
     try {
       if (isCreatingNew) {
+        const id = await createPrompt({
+          type: promptType,
+          name,
+          version,
+          content,
+          source: "custom",
+        });
+
         if (activeTab === "system") {
-          const id = await createSystemPrompt({
-            name, version, versionNumber: 1, content, source: "custom",
-          });
           setSelectedSystemId(id);
         } else if (activeTab === "user") {
-          const id = await createUserPrompt({
-            name, version, versionNumber: 1, content, source: "custom",
-          });
           setSelectedUserId(id);
         } else {
-          const id = await createJsonSchema({
-            name, version, versionNumber: 1, content, source: "custom",
-          });
           setSelectedSchemaId(id);
         }
+
         setIsCreatingNew(false);
         setMessage({ type: "success", text: "Prompt created!" });
       } else {
-        if (activeTab === "system" && selectedSystemId) {
-          await updateSystemPrompt({ id: selectedSystemId, name, version, content });
-        } else if (activeTab === "user" && selectedUserId) {
-          await updateUserPrompt({ id: selectedUserId, name, version, content });
-        } else if (activeTab === "schema" && selectedSchemaId) {
-          await updateJsonSchema({ id: selectedSchemaId, name, version, content });
+        const selectedId = activeTab === "system" ? selectedSystemId :
+                          activeTab === "user" ? selectedUserId : selectedSchemaId;
+
+        if (selectedId) {
+          await updatePrompt({ id: selectedId, name, version, content });
+          setMessage({ type: "success", text: "Saved!" });
         }
-        setMessage({ type: "success", text: "Saved!" });
       }
       setTimeout(() => setMessage(null), 2000);
     } catch (error) {
@@ -258,11 +255,11 @@ export function AnalysisPromptEditor({ processId, onApply }: AnalysisPromptEdito
     setMessage(null);
 
     try {
-      await setProcessPrompts({
+      await setUnifiedProcessPrompts({
         processId: processId as Id<"processes">,
         systemPromptId: selectedSystemId,
         userPromptId: selectedUserId,
-        jsonSchemaId: selectedSchemaId,
+        schemaId: selectedSchemaId,
       });
       await setSetting({ key: "analysis_model", value: selectedModel, isSecret: false });
 
@@ -326,7 +323,7 @@ export function AnalysisPromptEditor({ processId, onApply }: AnalysisPromptEdito
             <select
               value={selectedSystemId || ""}
               onChange={(e) => {
-                setSelectedSystemId(e.target.value as Id<"systemPrompts"> || null);
+                setSelectedSystemId(e.target.value as Id<"prompts"> || null);
                 setIsCreatingNew(false);
               }}
               className="flex-1 p-2 border rounded-md bg-background text-sm"
@@ -377,7 +374,7 @@ export function AnalysisPromptEditor({ processId, onApply }: AnalysisPromptEdito
             <select
               value={selectedUserId || ""}
               onChange={(e) => {
-                setSelectedUserId(e.target.value as Id<"userPrompts"> || null);
+                setSelectedUserId(e.target.value as Id<"prompts"> || null);
                 setIsCreatingNew(false);
               }}
               className="flex-1 p-2 border rounded-md bg-background text-sm"
@@ -428,7 +425,7 @@ export function AnalysisPromptEditor({ processId, onApply }: AnalysisPromptEdito
             <select
               value={selectedSchemaId || ""}
               onChange={(e) => {
-                setSelectedSchemaId(e.target.value as Id<"jsonSchemas"> || null);
+                setSelectedSchemaId(e.target.value as Id<"prompts"> || null);
                 setIsCreatingNew(false);
               }}
               className="flex-1 p-2 border rounded-md bg-background text-sm"

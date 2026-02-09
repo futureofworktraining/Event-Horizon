@@ -151,7 +151,7 @@ export const analyzeVideo = action({
       await updateProgress(ctx, args.jobId, 45);
 
       // Get prompts from database
-      // Priority: 1) Individual prompt IDs on process, 2) prompt configuration, 3) defaults
+      // Priority: 1) Unified prompt IDs on process, 2) Legacy prompt IDs, 3) Defaults
       let systemPromptContent: string | null = null;
       let userPromptContent: string | null = null;
       let jsonSchemaContent: string | null = null;
@@ -162,49 +162,82 @@ export const analyzeVideo = action({
           processId: job.processId,
         });
 
-        // First priority: Individual prompt IDs on the process
-        if (existingProcess?.systemPromptId) {
-          const sysPrompt = await ctx.runQuery(internal.analysisPrompts.getSystemPromptInternal, {
-            id: existingProcess.systemPromptId,
-          });
-          if (sysPrompt) systemPromptContent = sysPrompt.content;
-        }
-        if (existingProcess?.userPromptId) {
-          const usrPrompt = await ctx.runQuery(internal.analysisPrompts.getUserPromptInternal, {
-            id: existingProcess.userPromptId,
-          });
-          if (usrPrompt) userPromptContent = usrPrompt.content;
-        }
-        if (existingProcess?.jsonSchemaId) {
-          const schema = await ctx.runQuery(internal.analysisPrompts.getJsonSchemaInternal, {
-            id: existingProcess.jsonSchemaId,
-          });
-          if (schema) jsonSchemaContent = schema.content;
-        }
+        if (existingProcess) {
+          // First priority: Unified prompt IDs on the process (new system)
+          if (existingProcess.unifiedSystemPromptId) {
+            const sysPrompt = await ctx.runQuery(internal.unifiedPrompts.getPromptInternal, {
+              id: existingProcess.unifiedSystemPromptId,
+            });
+            if (sysPrompt) systemPromptContent = sysPrompt.content;
+          }
+          if (existingProcess.unifiedUserPromptId) {
+            const usrPrompt = await ctx.runQuery(internal.unifiedPrompts.getPromptInternal, {
+              id: existingProcess.unifiedUserPromptId,
+            });
+            if (usrPrompt) userPromptContent = usrPrompt.content;
+          }
+          if (existingProcess.unifiedSchemaId) {
+            const schema = await ctx.runQuery(internal.unifiedPrompts.getPromptInternal, {
+              id: existingProcess.unifiedSchemaId,
+            });
+            if (schema) jsonSchemaContent = schema.content;
+          }
 
-        // Second priority: Prompt configuration ID on the process
-        if ((!systemPromptContent || !userPromptContent || !jsonSchemaContent) && existingProcess?.promptConfigurationId) {
-          const promptConfig = await ctx.runQuery(
-            internal.analysisPrompts.getPromptConfigurationInternal,
-            { id: existingProcess.promptConfigurationId }
-          );
-          if (promptConfig) {
-            if (!systemPromptContent && promptConfig.systemPrompt) systemPromptContent = promptConfig.systemPrompt.content;
-            if (!userPromptContent && promptConfig.userPrompt) userPromptContent = promptConfig.userPrompt.content;
-            if (!jsonSchemaContent && promptConfig.jsonSchema) jsonSchemaContent = promptConfig.jsonSchema.content;
+          // Second priority: Legacy prompt IDs (for backward compatibility)
+          if (!systemPromptContent && existingProcess.systemPromptId) {
+            const sysPrompt = await ctx.runQuery(internal.analysisPrompts.getSystemPromptInternal, {
+              id: existingProcess.systemPromptId,
+            });
+            if (sysPrompt) systemPromptContent = sysPrompt.content;
+          }
+          if (!userPromptContent && existingProcess.userPromptId) {
+            const usrPrompt = await ctx.runQuery(internal.analysisPrompts.getUserPromptInternal, {
+              id: existingProcess.userPromptId,
+            });
+            if (usrPrompt) userPromptContent = usrPrompt.content;
+          }
+          if (!jsonSchemaContent && existingProcess.jsonSchemaId) {
+            const schema = await ctx.runQuery(internal.analysisPrompts.getJsonSchemaInternal, {
+              id: existingProcess.jsonSchemaId,
+            });
+            if (schema) jsonSchemaContent = schema.content;
           }
         }
       }
 
-      // Third priority: Get defaults if still missing
+      // Third priority: Get defaults from unified prompts table
       if (!systemPromptContent || !userPromptContent || !jsonSchemaContent) {
-        const defaultConfig = await ctx.runQuery(
+        const defaultPrompts = await ctx.runQuery(
+          internal.unifiedPrompts.getDefaultAnalysisPromptsInternal
+        );
+        if (defaultPrompts) {
+          if (!systemPromptContent && defaultPrompts.systemPrompt) {
+            systemPromptContent = defaultPrompts.systemPrompt.content;
+          }
+          if (!userPromptContent && defaultPrompts.userPrompt) {
+            userPromptContent = defaultPrompts.userPrompt.content;
+          }
+          if (!jsonSchemaContent && defaultPrompts.jsonSchema) {
+            jsonSchemaContent = defaultPrompts.jsonSchema.content;
+          }
+        }
+      }
+
+      // Fallback to legacy defaults if unified prompts are empty
+      if (!systemPromptContent || !userPromptContent || !jsonSchemaContent) {
+        const legacyDefaults = await ctx.runQuery(
           internal.analysisPrompts.getDefaultPromptConfigurationInternal
         );
-        if (defaultConfig) {
-          if (!systemPromptContent && defaultConfig.systemPrompt) systemPromptContent = defaultConfig.systemPrompt.content;
-          if (!userPromptContent && defaultConfig.userPrompt) userPromptContent = defaultConfig.userPrompt.content;
-          if (!jsonSchemaContent && defaultConfig.jsonSchema) jsonSchemaContent = defaultConfig.jsonSchema.content;
+        if (legacyDefaults) {
+          if (!systemPromptContent && legacyDefaults.systemPrompt) {
+            systemPromptContent = legacyDefaults.systemPrompt.content;
+          }
+          if (!userPromptContent && legacyDefaults.userPrompt) {
+            userPromptContent = legacyDefaults.userPrompt.content;
+          }
+          if (!jsonSchemaContent && legacyDefaults.jsonSchema) {
+            jsonSchemaContent = legacyDefaults.jsonSchema.content;
+          }
         }
       }
 

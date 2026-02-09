@@ -6,38 +6,26 @@ import { internal, api } from "./_generated/api";
 import { GoogleGenAI } from "@google/genai";
 import { Jimp } from "jimp";
 
-// Function to build a targeted prompt for finding a specific UI element
-function buildTargetedPrompt(
-  elementName: string,
-  elementType: string,
-  locationDescription: string,
-  screenRegion: string,
-  description: string,
-  customInstructions?: string
-): string {
-  let prompt = `You are a UI element detector. Find the EXACT bounding box of ONE specific UI element in this screenshot.
+// Default prompt template (used when no custom prompt is configured)
+const DEFAULT_UI_ELEMENT_PROMPT_TEMPLATE = `You are a UI element detector. Find the EXACT bounding box of ONE specific UI element in this screenshot.
 
 TARGET ELEMENT TO FIND:
-- Element name/label: "${elementName}"
-- Element type: ${elementType}
-- Location description: ${locationDescription}
-- Screen region: ${screenRegion}
-- User action context: ${description}
+- Element name/label: "{elementName}"
+- Element type: {elementType}
+- Location description: {locationDescription}
+- Screen region: {screenRegion}
+- User action context: {description}
 
 IMPORTANT INSTRUCTIONS:
-1. Look for a visible label or text that says "${elementName}" or similar
+1. Look for a visible label or text that says "{elementName}" or similar
 2. The bounding box should cover the INTERACTIVE element itself (input field, button, etc.), NOT the label
 3. If there are multiple similar elements (e.g., multiple text fields), use the label text to identify the correct one
 4. For input fields: look for the label text ABOVE or BESIDE the input, then select that specific input field
-5. The element type "${elementType}" helps identify - for "text_field" look for an input box, for "button" look for a clickable button, etc.`;
+5. The element type "{elementType}" helps identify - for "text_field" look for an input box, for "button" look for a clickable button, etc.
 
-  if (customInstructions) {
-    prompt += `\n\nADDITIONAL INSTRUCTIONS:\n${customInstructions}`;
-  }
-
-  prompt += `\n\nReturn a JSON object:
+Return a JSON object:
 {
-  "label": "${elementName}",
+  "label": "{elementName}",
   "box_2d": [ymin, xmin, ymax, xmax],
   "found": true
 }
@@ -45,9 +33,34 @@ IMPORTANT INSTRUCTIONS:
 Where box_2d coordinates are normalized to 0-1000 scale (0=top/left, 1000=bottom/right).
 
 If the element cannot be found, return:
-{"label": "${elementName}", "box_2d": [0, 0, 0, 0], "found": false}
+{"label": "{elementName}", "box_2d": [0, 0, 0, 0], "found": false}
 
 Return ONLY the JSON object, no other text.`;
+
+// Function to build a targeted prompt for finding a specific UI element
+function buildTargetedPrompt(
+  elementName: string,
+  elementType: string,
+  locationDescription: string,
+  screenRegion: string,
+  description: string,
+  customInstructions?: string,
+  basePromptTemplate?: string
+): string {
+  // Use provided template or default
+  let prompt = basePromptTemplate || DEFAULT_UI_ELEMENT_PROMPT_TEMPLATE;
+
+  // Replace placeholders with actual values
+  prompt = prompt
+    .replace(/\{elementName\}/g, elementName)
+    .replace(/\{elementType\}/g, elementType)
+    .replace(/\{locationDescription\}/g, locationDescription)
+    .replace(/\{screenRegion\}/g, screenRegion)
+    .replace(/\{description\}/g, description);
+
+  if (customInstructions) {
+    prompt += `\n\nADDITIONAL INSTRUCTIONS:\n${customInstructions}`;
+  }
 
   return prompt;
 }
@@ -64,7 +77,7 @@ export const detectBoundingBoxes = action({
   args: {
     processId: v.id("processes"),
     forceRedetect: v.optional(v.boolean()), // If true, re-detect even if already detected
-    customPrompt: v.optional(v.string()), // Optional custom instructions
+    customPrompt: v.optional(v.string()), // Optional custom instructions (appended to base prompt)
   },
   handler: async (ctx, args): Promise<{
     success: boolean;
@@ -83,6 +96,30 @@ export const detectBoundingBoxes = action({
     }
     if (!apiKey) {
       return { success: false, processed: 0, skipped: 0, failed: 0, total: 0, errors: ["Gemini API key not configured. Please set it in Settings."] };
+    }
+
+    // Get the base prompt from database
+    // Priority: process.uiElementPromptId -> default from unified prompts table
+    const process = await ctx.runQuery(api.processes.getProcess, { processId: args.processId });
+    let basePromptTemplate: string | undefined;
+
+    if (process?.uiElementPromptId) {
+      const promptDoc = await ctx.runQuery(internal.unifiedPrompts.getPromptInternal, {
+        id: process.uiElementPromptId,
+      });
+      if (promptDoc) {
+        basePromptTemplate = promptDoc.content;
+      }
+    }
+
+    // Fallback to default
+    if (!basePromptTemplate) {
+      const defaultPrompt = await ctx.runQuery(internal.unifiedPrompts.getDefaultPromptInternal, {
+        type: "ui_element",
+      });
+      if (defaultPrompt) {
+        basePromptTemplate = defaultPrompt.content;
+      }
     }
 
     const steps = await ctx.runQuery(internal.boundingBoxQueries.getStepsWithScreenshots, {
@@ -172,7 +209,8 @@ export const detectBoundingBoxes = action({
           uiElement.locationDescription,
           uiElement.screenRegion,
           step.description,
-          customPrompt
+          customPrompt,
+          basePromptTemplate
         );
 
         // Generate bounding box using Gemini 2.5 Flash with thinking disabled
@@ -283,7 +321,7 @@ export const detectBoundingBoxes = action({
 export const detectSingleBoundingBox = action({
   args: {
     stepId: v.id("steps"),
-    customPrompt: v.optional(v.string()), // Optional custom prompt to override default
+    customPrompt: v.optional(v.string()), // Optional custom instructions (appended to base prompt)
   },
   handler: async (ctx, args): Promise<{
     success: boolean;
@@ -316,6 +354,29 @@ export const detectSingleBoundingBox = action({
 
     if (!step.uiElement) {
       return { success: false, error: "Step has no UI element defined" };
+    }
+
+    // Get the base prompt from database
+    const process = await ctx.runQuery(api.processes.getProcess, { processId: step.processId });
+    let basePromptTemplate: string | undefined;
+
+    if (process?.uiElementPromptId) {
+      const promptDoc = await ctx.runQuery(internal.unifiedPrompts.getPromptInternal, {
+        id: process.uiElementPromptId,
+      });
+      if (promptDoc) {
+        basePromptTemplate = promptDoc.content;
+      }
+    }
+
+    // Fallback to default
+    if (!basePromptTemplate) {
+      const defaultPrompt = await ctx.runQuery(internal.unifiedPrompts.getDefaultPromptInternal, {
+        type: "ui_element",
+      });
+      if (defaultPrompt) {
+        basePromptTemplate = defaultPrompt.content;
+      }
     }
 
     try {
@@ -359,7 +420,9 @@ export const detectSingleBoundingBox = action({
         uiElement.elementType,
         uiElement.locationDescription,
         uiElement.screenRegion,
-        step.description
+        step.description,
+        args.customPrompt,
+        basePromptTemplate
       );
 
       // Call Gemini 
