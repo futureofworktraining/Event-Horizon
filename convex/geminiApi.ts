@@ -47,6 +47,7 @@ export interface GeminiToolDeclaration {
 
 export interface GeminiCacheResult {
   cacheName: string;
+  expireTime?: string; // RFC 3339 timestamp when cache expires
 }
 
 export interface GeminiMultiTurnResponse {
@@ -390,7 +391,7 @@ export async function createGeminiCache(
     throw new Error("Cache creation succeeded but no name returned");
   }
 
-  return { cacheName: result.name };
+  return { cacheName: result.name, expireTime: result.expireTime };
 }
 
 /**

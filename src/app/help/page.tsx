@@ -4,6 +4,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Button } from "@/components/ui/button";
 import { HelpCircle, BookOpen, MessageCircle, ExternalLink, Lightbulb, Zap } from "lucide-react";
 import Link from "next/link";
+import { HelpDialog } from "@/components/HelpDialog";
 
 export default function HelpPage() {
   return (
@@ -110,10 +111,12 @@ export default function HelpPage() {
             </CardDescription>
           </CardHeader>
           <CardContent className="space-y-3">
-            <Button variant="outline" className="w-full justify-start gap-2" disabled>
-              <ExternalLink className="w-4 h-4" />
-              User Guide
-            </Button>
+            <HelpDialog>
+              <Button variant="outline" className="w-full justify-start gap-2">
+                <ExternalLink className="w-4 h-4" />
+                User Guide
+              </Button>
+            </HelpDialog>
             <Button variant="outline" className="w-full justify-start gap-2" disabled>
               <ExternalLink className="w-4 h-4" />
               API Reference
@@ -138,8 +141,8 @@ export default function HelpPage() {
           <p className="text-muted-foreground text-sm mb-4">
             If you have questions or need assistance, our team is here to help.
           </p>
-          <Button variant="outline" disabled>
-            Contact Support
+          <Button variant="outline" asChild>
+            <a href="mailto:futureofworkchannel@gmail.com">Contact Support</a>
           </Button>
         </CardContent>
       </Card>

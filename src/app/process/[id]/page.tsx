@@ -133,15 +133,7 @@ export default function ProcessPage() {
     }
   }, [process?.job, isJobActive]);
 
-  // Auto-close panel once when status transitions to completed
-  const autoClosedRef = useRef(false);
-  useEffect(() => {
-    if (process?.job?.status === "completed" && isAgentPanelOpen && !autoClosedRef.current) {
-      autoClosedRef.current = true;
-      const timer = setTimeout(() => setIsAgentPanelOpen(false), 2000);
-      return () => clearTimeout(timer);
-    }
-  }, [process?.job?.status, isAgentPanelOpen]);
+
 
   // Check if this is the main process (not a subprocess)
   const isMainProcess = process?.isMainProcess !== false && !process?.parentProcessId;
@@ -645,9 +637,21 @@ export default function ProcessPage() {
                             } catch (error) {
                               const errorMessage = error instanceof Error ? error.message : "Failed to start re-analysis";
                               setReanalyzeError(errorMessage);
-                              toast.error("Re-analysis failed", {
-                                description: errorMessage
-                              });
+                              const isApiKeyError = errorMessage.toLowerCase().includes("gemini api key not configured");
+                              if (isApiKeyError) {
+                                toast.error("Gemini API key not configured", {
+                                  description: "Get your free API key at aistudio.google.com/apikey, then add it in Settings.",
+                                  duration: 10000,
+                                  action: {
+                                    label: "Open Settings",
+                                    onClick: () => window.location.href = "/settings",
+                                  },
+                                });
+                              } else {
+                                toast.error("Re-analysis failed", {
+                                  description: errorMessage
+                                });
+                              }
                             } finally {
                               setIsReanalyzing(false);
                             }
