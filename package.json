@@ -2,6 +2,7 @@
   "name": "video-to-pdd",
   "version": "0.1.0",
   "private": true,
+  "license": "Apache-2.0",
   "scripts": {
     "dev": "npm-run-all --parallel dev:backend dev:frontend",
     "dev:backend": "convex dev --url http://127.0.0.1:3210",

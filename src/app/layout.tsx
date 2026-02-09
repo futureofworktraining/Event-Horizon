@@ -10,6 +10,9 @@ import { ExportProvider } from "@/contexts/ExportContext";
 import { ExportProgressToast } from "@/components/pdd/ExportProgressToast";
 import { ApiKeyCheck } from "@/components/ApiKeyCheck";
 
+// Force dynamic rendering — Convex requires NEXT_PUBLIC_CONVEX_URL at runtime
+export const dynamic = "force-dynamic";
+
 const geistSans = Geist({
   variable: "--font-geist-sans",
   subsets: ["latin"],
