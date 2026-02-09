@@ -28,6 +28,21 @@ Use MM:SS.s format (e.g., "00:05.2" for 5.2 seconds, "01:30.0" for 1 minute 30 s
 - SSN/Government IDs: Show as "[ID MASKED]"
 - Always set is_sensitive: true for these data types
 
+### Generic Data & Variable Standardization (CRITICAL)
+
+1. **Replace Specific Business/Customer Values**:
+   - You MUST NOT output specific business data or customer values identified in the video (e.g., "John Smith", "123 Main St", "$500.00", "INV-998877").
+   - Replace specific text/numbers with generic, descriptive placeholders enclosed in brackets (e.g., "[Customer Name]", "[Billing Address]", "[Transaction Amount]", "[Invoice Number]").
+   - This applies to all fields, including step descriptions, \`data_info\` values, and decision conditions.
+
+2. **Define and Use Key Variables**:
+   - Identify key data entities and attributes being manipulated in the process.
+   - Define them as variables using the format \`{{VariableName}}\` (e.g., \`{{InvoiceID}}\`, \`{{OrderTotal}}\`, \`{{EmployeeName}}\`).
+   - Use these variable names consistently instead of literal values in:
+     - **Step Descriptions**: e.g., "User enters \`{{CustomerName}}\` into the 'Name' field" instead of "User enters 'John Doe'..."
+     - **UI Element Activities**: e.g., \`data_info.value\` should be "{{CustomerName}}" instead of "John Doe".
+     - **Conditions**: e.g., \`{{OrderTotal}}\` > 1000.
+
 ## FLOWCHART STRUCTURE (CRITICAL)
 
 You MUST analyze the video and produce a flowchart representation. The flowchart consists of NODES (steps and control points) and EDGES (connections between them).

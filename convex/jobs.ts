@@ -35,6 +35,8 @@ export const createJob = mutation({
       autoBoundingBoxes: args.autoBoundingBoxes ?? true,
       autoSensitiveInfo: args.autoSensitiveInfo ?? false,
       sensitiveInfoPrompt: args.sensitiveInfoPrompt,
+      // Always use agent mode
+      analysisMode: "agent",
     });
     return jobId;
   },

@@ -64,11 +64,23 @@ export const getProcessWithFlow = query({
       })
     );
 
-    // Get subprocesses (child processes)
+    // Get subprocesses (child processes), sorted by video timestamp
     const subprocesses = await ctx.db
       .query("processes")
       .withIndex("by_parent", (q) => q.eq("parentProcessId", args.processId))
       .collect();
+
+    subprocesses.sort((a, b) => {
+      const parseTs = (ts?: string) => {
+        if (!ts) return Infinity;
+        const parts = ts.split(":");
+        if (parts.length === 2) return parseFloat(parts[0]) * 60 + parseFloat(parts[1]);
+        return Infinity;
+      };
+      const diff = parseTs(a.videoStartTimestamp) - parseTs(b.videoStartTimestamp);
+      if (diff !== 0) return diff;
+      return a._creationTime - b._creationTime;
+    });
 
     // Calculate total steps including all subprocesses
     let totalStepsAllProcesses = steps.length;
@@ -107,12 +119,27 @@ export const getProcessesForJob = query({
     // Get top-level processes (no parent)
     const topLevelProcesses = allProcesses.filter(p => !p.parentProcessId);
 
+    // Helper to parse video timestamp to seconds
+    const parseTs = (ts?: string) => {
+      if (!ts) return Infinity;
+      const parts = ts.split(":");
+      if (parts.length === 2) return parseFloat(parts[0]) * 60 + parseFloat(parts[1]);
+      return Infinity;
+    };
+
     // Build hierarchy
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const buildHierarchy = async (parentId: string | null): Promise<any[]> => {
       const children = allProcesses.filter(p =>
         parentId ? p.parentProcessId?.toString() === parentId : !p.parentProcessId
       );
+
+      // Sort children by video start timestamp
+      children.sort((a, b) => {
+        const diff = parseTs(a.videoStartTimestamp) - parseTs(b.videoStartTimestamp);
+        if (diff !== 0) return diff;
+        return a._creationTime - b._creationTime;
+      });
 
       return Promise.all(children.map(async (process) => {
         const flow = await ctx.db
@@ -166,17 +193,37 @@ export const getProcessHierarchy = query({
       }
     }
 
+    // Helper to parse video timestamp to seconds
+    const parseTs = (ts?: string) => {
+      if (!ts) return Infinity;
+      const parts = ts.split(":");
+      if (parts.length === 2) return parseFloat(parts[0]) * 60 + parseFloat(parts[1]);
+      return Infinity;
+    };
+
     // Get siblings (other processes with same parent)
     const siblings = await ctx.db
       .query("processes")
       .withIndex("by_parent", (q) => q.eq("parentProcessId", process.parentProcessId))
       .collect();
 
+    siblings.sort((a, b) => {
+      const diff = parseTs(a.videoStartTimestamp) - parseTs(b.videoStartTimestamp);
+      if (diff !== 0) return diff;
+      return a._creationTime - b._creationTime;
+    });
+
     // Get children
     const children = await ctx.db
       .query("processes")
       .withIndex("by_parent", (q) => q.eq("parentProcessId", args.processId))
       .collect();
+
+    children.sort((a, b) => {
+      const diff = parseTs(a.videoStartTimestamp) - parseTs(b.videoStartTimestamp);
+      if (diff !== 0) return diff;
+      return a._creationTime - b._creationTime;
+    });
 
     return {
       process,

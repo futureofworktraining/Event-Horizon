@@ -319,6 +319,9 @@ export default defineSchema({
     autoBoundingBoxes: v.optional(v.boolean()), // Auto-detect UI element bounding boxes
     autoSensitiveInfo: v.optional(v.boolean()), // Auto-detect sensitive information
     sensitiveInfoPrompt: v.optional(v.string()), // Prompt for sensitive info detection
+    // Agent analysis mode
+    analysisMode: v.optional(v.union(v.literal("standard"), v.literal("agent"))),
+    agentMaxIterations: v.optional(v.number()),
   })
     .index("by_status", ["status"])
     .index("by_created", ["createdAt"])
@@ -434,6 +437,72 @@ export default defineSchema({
   })
     .index("by_process", ["processId"])
     .index("by_process_step", ["processId", "stepNumber"]),
+
+  // ============================================
+  // AGENT ANALYSIS TABLES
+  // ============================================
+
+  // Agent Events table - stores granular real-time events from the ReAct agent loop
+  agentEvents: defineTable({
+    jobId: v.id("jobs"),
+    eventType: v.union(
+      v.literal("state_changed"),
+      v.literal("thinking"),
+      v.literal("tool_call"),
+      v.literal("tool_result"),
+      v.literal("pdd_updated"),
+      v.literal("progress"),
+      v.literal("completed"),
+      v.literal("error")
+    ),
+    payload: v.string(), // JSON-encoded event data
+    iteration: v.optional(v.number()),
+    createdAt: v.number(),
+  })
+    .index("by_job", ["jobId"])
+    .index("by_job_time", ["jobId", "createdAt"]),
+
+  // Agent Sessions table - tracks agent loop state, tokens, and cost
+  agentSessions: defineTable({
+    jobId: v.id("jobs"),
+    state: v.union(
+      v.literal("idle"),
+      v.literal("uploading"),
+      v.literal("caching"),
+      v.literal("analyzing"),
+      v.literal("completed"),
+      v.literal("error"),
+      v.literal("paused")
+    ),
+    maxIterations: v.number(),
+    iteration: v.number(),
+
+    // Gemini cache state
+    cacheName: v.optional(v.string()),
+    cacheCreatedAt: v.optional(v.number()),
+    cacheTokenCount: v.optional(v.number()),
+
+    // Token accounting
+    inputTokens: v.number(),
+    outputTokens: v.number(),
+    cachedTokens: v.number(),
+    totalCost: v.number(),
+
+    // Timing
+    startedAt: v.optional(v.number()),
+    completedAt: v.optional(v.number()),
+    error: v.optional(v.string()),
+
+    // Process ID mapping (agent temp IDs -> Convex IDs)
+    processIdMap: v.optional(v.string()), // JSON: {"proc-001": "k57abc123..."}
+
+    // Conversation history (for potential resume/debug)
+    conversationHistory: v.optional(v.string()), // JSON-encoded messages array
+
+    // User-requested stop/pause signal
+    stopRequested: v.optional(v.union(v.literal("stop"), v.literal("pause"))),
+  })
+    .index("by_job", ["jobId"]),
 
   // Process Flows table - stores flowchart structure (nodes and edges)
   processFlows: defineTable({

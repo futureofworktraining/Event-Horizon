@@ -8,6 +8,13 @@
  * @module
  */
 
+import type * as agentAnalyze from "../agentAnalyze.js";
+import type * as agentEvents from "../agentEvents.js";
+import type * as agentLoop from "../agentLoop.js";
+import type * as agentMutations from "../agentMutations.js";
+import type * as agentQueries from "../agentQueries.js";
+import type * as agentSessions from "../agentSessions.js";
+import type * as agentTools from "../agentTools.js";
 import type * as analysisPrompts from "../analysisPrompts.js";
 import type * as analysisVersions from "../analysisVersions.js";
 import type * as analyze from "../analyze.js";
@@ -51,6 +58,13 @@ import type {
 } from "convex/server";
 
 declare const fullApi: ApiFromModules<{
+  agentAnalyze: typeof agentAnalyze;
+  agentEvents: typeof agentEvents;
+  agentLoop: typeof agentLoop;
+  agentMutations: typeof agentMutations;
+  agentQueries: typeof agentQueries;
+  agentSessions: typeof agentSessions;
+  agentTools: typeof agentTools;
   analysisPrompts: typeof analysisPrompts;
   analysisVersions: typeof analysisVersions;
   analyze: typeof analyze;

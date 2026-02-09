@@ -40,7 +40,7 @@ export function VideoUploader({ onJobCreated }: VideoUploaderProps) {
 
   const generateUploadUrl = useMutation(api.jobs.generateUploadUrl);
   const createJob = useMutation(api.jobs.createJob);
-  const analyzeVideo = useAction(api.analyze.analyzeVideo);
+  const agentAnalyzeVideo = useAction(api.agentAnalyze.agentAnalyzeVideo);
 
   const validateFile = (file: File): string | null => {
     if (!ACCEPTED_VIDEO_TYPES.includes(file.type)) {
@@ -146,8 +146,8 @@ export function VideoUploader({ onJobCreated }: VideoUploaderProps) {
         sensitiveInfoPrompt: autoSensitiveInfo ? sensitiveInfoPrompt : undefined,
       });
 
-      // Trigger analysis (runs in background)
-      analyzeVideo({
+      // Trigger agent analysis (runs in background)
+      agentAnalyzeVideo({
         jobId: jobId as any,
         videoStorageId: storageId as any,
       }).catch(console.error);
@@ -293,7 +293,7 @@ export function VideoUploader({ onJobCreated }: VideoUploaderProps) {
       {file && !isUploading && (
         <Card className="border-muted">
           <CardContent className="pt-4 space-y-4">
-            <h4 className="text-sm font-medium text-muted-foreground">Analysis Options</h4>
+            <h4 className="text-sm font-medium text-muted-foreground">Post-Processing Options</h4>
 
             <div className="space-y-3">
               {/* Auto Extract Screenshots */}

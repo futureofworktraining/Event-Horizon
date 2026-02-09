@@ -12,10 +12,8 @@ import { ProcessingStatus } from "@/components/pdd/ProcessingStatus";
 import { ScreenshotExtractor } from "@/components/pdd/ScreenshotExtractor";
 import { BoundingBoxDetector } from "@/components/pdd/BoundingBoxDetector";
 import { SensitiveInfoDetector } from "@/components/pdd/SensitiveInfoDetector";
-import { AnalysisPromptEditor } from "@/components/pdd/AnalysisPromptEditor";
-import { DetectionPromptEditor } from "@/components/pdd/DetectionPromptEditor";
+import { AgentPanel } from "@/components/pdd/AgentPanel";
 import { AutoProcessingOrchestrator } from "@/components/pdd/AutoProcessingOrchestrator";
-import { PddGenerationToast } from "@/components/pdd/PddGenerationToast";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import {
@@ -34,8 +32,9 @@ import {
   ProcessNavigator,
   ProcessBreadcrumbs,
 } from "@/components/flowchart";
+import { cn } from "@/lib/utils";
 import Link from "next/link";
-import { Workflow, List, ChevronDown, ChevronUp, Settings2, RefreshCw, Target, ShieldAlert, FileText, Loader2, History, Eye, Image, Box, Lock } from "lucide-react";
+import { Workflow, List, ChevronDown, ChevronUp, Settings2, RefreshCw, Target, ShieldAlert, Loader2, History, Eye, Image, Box, Lock } from "lucide-react";
 import { toast } from "sonner";
 
 type ViewMode = "flowchart" | "list";
@@ -59,8 +58,6 @@ export default function ProcessPage() {
   // Collapsible sections state
   const [showBoundingBoxSection, setShowBoundingBoxSection] = useState(false);
   const [showSensitiveInfoSection, setShowSensitiveInfoSection] = useState(false);
-  const [showPromptSection, setShowPromptSection] = useState(false);
-  const [showDetectionPromptSection, setShowDetectionPromptSection] = useState(false);
 
   // Re-analyze state
   const [isReanalyzing, setIsReanalyzing] = useState(false);
@@ -120,6 +117,31 @@ export default function ProcessPage() {
 
   // Check if re-analysis is in progress (job processing but has existing process data)
   const isReanalysisInProgress = process?.job?.status === "processing" && !!process?.processName;
+
+  // Check if job is actively processing (first analysis or re-analysis)
+  const isJobActive = process?.job?.status === "processing" || process?.job?.status === "pending";
+
+  // Agent panel state - open by default when job is active
+  const [isAgentPanelOpen, setIsAgentPanelOpen] = useState(false);
+  const agentPanelInitialized = useRef(false);
+
+  // Initialize panel state when process data first loads
+  useEffect(() => {
+    if (process?.job && !agentPanelInitialized.current) {
+      agentPanelInitialized.current = true;
+      setIsAgentPanelOpen(!!isJobActive);
+    }
+  }, [process?.job, isJobActive]);
+
+  // Auto-close panel once when status transitions to completed
+  const autoClosedRef = useRef(false);
+  useEffect(() => {
+    if (process?.job?.status === "completed" && isAgentPanelOpen && !autoClosedRef.current) {
+      autoClosedRef.current = true;
+      const timer = setTimeout(() => setIsAgentPanelOpen(false), 2000);
+      return () => clearTimeout(timer);
+    }
+  }, [process?.job?.status, isAgentPanelOpen]);
 
   // Check if this is the main process (not a subprocess)
   const isMainProcess = process?.isMainProcess !== false && !process?.parentProcessId;
@@ -285,33 +307,6 @@ export default function ProcessPage() {
     );
   }
 
-  // Check if job is still processing (but not re-analyzing with existing data)
-  // During re-analysis, we want to show the existing data with a banner
-  if (process.job && (process.job.status === "pending" || process.job.status === "processing") && !isReanalysisInProgress) {
-    return (
-      <div className="container mx-auto px-4 py-8">
-        <div className="w-full mx-auto space-y-6">
-          <div className="flex items-center gap-2">
-            <Link href="/projects" className="text-muted-foreground hover:text-foreground">
-              Projects
-            </Link>
-            <span className="text-muted-foreground">/</span>
-            <span>Processing</span>
-          </div>
-          <ProcessingStatus
-            status={process.job.status}
-            progress={process.job.progress}
-            errorMessage={process.job.errorMessage}
-          />
-        </div>
-        {/* PDD Generation Toast */}
-        {process.job._id && (
-          <PddGenerationToast jobId={process.job._id} />
-        )}
-      </div>
-    );
-  }
-
   // Check for failed job
   if (process.job && process.job.status === "failed") {
     return (
@@ -327,6 +322,7 @@ export default function ProcessPage() {
           <ProcessingStatus
             status="failed"
             errorMessage={process.job.errorMessage}
+            jobId={process.job._id}
           />
           <div className="text-center">
             <Link href="/upload">
@@ -342,7 +338,10 @@ export default function ProcessPage() {
   const hasFlow = process.flow && process.flow.nodes && process.flow.nodes.length > 0;
 
   return (
-    <div className="p-8">
+    <div className="flex h-full relative">
+    <div className={cn("flex-1 overflow-auto p-8 transition-all duration-300",
+      isAgentPanelOpen ? "pr-[416px]" : process?.job?._id ? "pr-20" : ""
+    )}>
       {/* Re-analysis in progress banner */}
       {isReanalysisInProgress && (
         <div className="mb-6 p-4 bg-blue-50 border border-blue-200 rounded-lg">
@@ -352,9 +351,6 @@ export default function ProcessPage() {
               <p className="font-medium text-blue-900">Re-analysis in progress</p>
               <p className="text-sm text-blue-700">
                 A new analysis is running. You can view the current version below, but editing is disabled until the new analysis completes.
-                {process.job?.progress !== undefined && process.job.progress > 0 && (
-                  <span className="ml-2 font-medium">({process.job.progress}% complete)</span>
-                )}
               </p>
             </div>
           </div>
@@ -518,54 +514,6 @@ export default function ProcessPage() {
                       stepsWithSensitiveDetection={process.steps.filter((s: any) => s.sensitiveInfoDetected).length}
                       variant="embedded"
                     />
-                  </div>
-                )}
-              </div>
-
-              {/* Analysis Prompt Editor - Collapsible */}
-              <div className="border rounded-lg">
-                <button
-                  onClick={() => setShowPromptSection(!showPromptSection)}
-                  className="w-full flex items-center justify-between p-3 hover:bg-muted/50 transition-colors"
-                >
-                  <div className="flex items-center gap-2">
-                    <FileText className="w-4 h-4 text-purple-600" />
-                    <span className="font-medium">Analysis Prompt</span>
-                    <span className="text-xs text-muted-foreground">(Advanced)</span>
-                  </div>
-                  {showPromptSection ? (
-                    <ChevronUp className="w-4 h-4" />
-                  ) : (
-                    <ChevronDown className="w-4 h-4" />
-                  )}
-                </button>
-                {showPromptSection && (
-                  <div className="p-4 border-t bg-gray-50/50">
-                    <AnalysisPromptEditor processId={process._id} />
-                  </div>
-                )}
-              </div>
-
-              {/* Detection Prompt Editor - Collapsible */}
-              <div className="border rounded-lg">
-                <button
-                  onClick={() => setShowDetectionPromptSection(!showDetectionPromptSection)}
-                  className="w-full flex items-center justify-between p-3 hover:bg-muted/50 transition-colors"
-                >
-                  <div className="flex items-center gap-2">
-                    <Target className="w-4 h-4 text-orange-600" />
-                    <span className="font-medium">Detection Prompts</span>
-                    <span className="text-xs text-muted-foreground">(UI Element & Sensitive Info)</span>
-                  </div>
-                  {showDetectionPromptSection ? (
-                    <ChevronUp className="w-4 h-4" />
-                  ) : (
-                    <ChevronDown className="w-4 h-4" />
-                  )}
-                </button>
-                {showDetectionPromptSection && (
-                  <div className="p-4 border-t bg-gray-50/50">
-                    <DetectionPromptEditor processId={process._id} />
                   </div>
                 )}
               </div>
@@ -805,6 +753,7 @@ export default function ProcessPage() {
             </CardContent>
           </Card>
         )}
+
       </div>
 
       {/* View Mode Toggle & Flowchart/List Section */}
@@ -867,11 +816,27 @@ export default function ProcessPage() {
           )}
         </div>
 
+        {/* Live-mode indicator */}
+        {isJobActive && !isReanalysisInProgress && (
+          <div className="flex items-center gap-2 text-sm text-amber-600 mb-4">
+            <Loader2 className="w-4 h-4 animate-spin" />
+            <span>Analysis in progress — steps update live</span>
+          </div>
+        )}
+
         {/* Main Content Area */}
         <div>
           {/* Flowchart or List View */}
           <div className="w-full">
-            {viewMode === "flowchart" ? (
+            {(!process.steps || process.steps.length === 0) && isJobActive ? (
+              <Card>
+                <CardContent className="py-12 text-center text-muted-foreground">
+                  <Loader2 className="w-8 h-8 mx-auto mb-3 animate-spin text-amber-500" />
+                  <p>Agent is analyzing the video...</p>
+                  <p className="text-sm mt-1">Steps will appear here as they are identified.</p>
+                </CardContent>
+              </Card>
+            ) : viewMode === "flowchart" ? (
               <Card>
                 <CardHeader className="pb-2">
                   <CardTitle className="text-lg flex items-center gap-2">
@@ -913,7 +878,7 @@ export default function ProcessPage() {
                 flowEdges={process.flow?.edges}
                 subprocesses={process.subprocesses}
                 onSubprocessClick={handleSubprocessClick}
-                readOnly={isReanalysisInProgress}
+                readOnly={isReanalysisInProgress || !!isJobActive}
               />
             )}
           </div>
@@ -922,11 +887,19 @@ export default function ProcessPage() {
 
       {/* Auto-processing orchestrator - handles screenshots and bounding boxes automatically */}
       {process.job?._id && (
-        <>
-          <AutoProcessingOrchestrator jobId={process.job._id} />
-          <PddGenerationToast jobId={process.job._id} />
-        </>
+        <AutoProcessingOrchestrator jobId={process.job._id} />
       )}
+    </div>
+
+    {/* Agent Panel - right side */}
+    {process.job?._id && (
+      <AgentPanel
+        jobId={process.job._id}
+        isOpen={isAgentPanelOpen}
+        onToggle={() => setIsAgentPanelOpen(prev => !prev)}
+        videoStorageId={process.job.videoStorageId}
+      />
+    )}
     </div>
   );
 }

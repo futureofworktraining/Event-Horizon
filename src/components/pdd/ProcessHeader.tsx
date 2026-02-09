@@ -292,7 +292,7 @@ export function ProcessHeader({
               processName={rootProcessName || processName}
               jobId={jobId}
             />
-            {jobId && <RawResponseViewer jobId={jobId} />}
+            {jobId && <RawResponseViewer jobId={jobId} processData={processData} />}
           </div>
         </div>
       </CardHeader>

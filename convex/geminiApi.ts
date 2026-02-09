@@ -30,12 +30,49 @@ export interface GeminiUsageMetadata {
   promptTokenCount: number;
   candidatesTokenCount: number;
   totalTokenCount: number;
+  cachedContentTokenCount?: number;
 }
 
 export interface GeminiResponse {
   text: string;
   usageMetadata?: GeminiUsageMetadata;
 }
+
+// Types for multi-turn conversation with tool calling
+export interface GeminiToolDeclaration {
+  name: string;
+  description: string;
+  parameters: object;
+}
+
+export interface GeminiCacheResult {
+  cacheName: string;
+}
+
+export interface GeminiMultiTurnResponse {
+  candidates: Array<{
+    content?: {
+      parts: Array<{
+        text?: string;
+        functionCall?: {
+          name: string;
+          args: Record<string, unknown>;
+        };
+      }>;
+    };
+    finishReason?: string;
+  }>;
+  usageMetadata?: GeminiUsageMetadata;
+}
+
+export type GeminiMessage = {
+  role: "user" | "model";
+  parts: Array<{
+    text?: string;
+    functionCall?: { name: string; args: Record<string, unknown> };
+    functionResponse?: { name: string; response: unknown };
+  }>;
+};
 
 // ============================================
 // File Management Functions
@@ -108,7 +145,8 @@ export async function uploadBufferToGemini(
     throw new Error("No upload URL received from Gemini");
   }
 
-  // 2. Upload content
+  // 2. Upload content — pass Buffer directly; Blob wrapping can corrupt
+  //    the payload in Node.js causing Gemini to 500 on subsequent status checks.
   const uploadResponse = await fetch(uploadUrl, {
     method: "POST",
     headers: {
@@ -116,7 +154,7 @@ export async function uploadBufferToGemini(
       "X-Goog-Upload-Offset": "0",
       "X-Goog-Upload-Command": "upload, finalize",
     },
-    body: new Blob([new Uint8Array(buffer)]),
+    body: new Uint8Array(buffer),
   });
 
   if (!uploadResponse.ok) {
@@ -129,7 +167,8 @@ export async function uploadBufferToGemini(
 }
 
 /**
- * Wait for Gemini file to finish processing
+ * Wait for Gemini file to finish processing.
+ * Retries on transient server errors (5xx) during polling.
  */
 export async function waitForFileProcessing(
   apiKey: string,
@@ -137,10 +176,30 @@ export async function waitForFileProcessing(
   pollIntervalMs: number = 2000
 ): Promise<GeminiFile> {
   let currentFile = file;
+  const maxRetries = 5;
+  let consecutiveErrors = 0;
 
   while (currentFile.state === "PROCESSING") {
     await new Promise(resolve => setTimeout(resolve, pollIntervalMs));
-    currentFile = await getGeminiFile(apiKey, currentFile.name);
+    try {
+      currentFile = await getGeminiFile(apiKey, currentFile.name);
+      consecutiveErrors = 0;
+    } catch (error) {
+      consecutiveErrors++;
+      const msg = error instanceof Error ? error.message : String(error);
+      console.warn(
+        `File status poll failed (attempt ${consecutiveErrors}/${maxRetries}): ${msg}`
+      );
+      if (consecutiveErrors >= maxRetries) {
+        throw new Error(
+          `Failed to get file status after ${maxRetries} retries: ${msg}`
+        );
+      }
+      // Exponential back-off before next retry
+      await new Promise(resolve =>
+        setTimeout(resolve, pollIntervalMs * consecutiveErrors)
+      );
+    }
   }
 
   if (currentFile.state === "FAILED") {
@@ -273,4 +332,141 @@ export async function generateTextContent(
   }
 
   throw new Error("No text content in Gemini response");
+}
+
+// ============================================
+// Context Caching Functions (for Agent)
+// ============================================
+
+const GEMINI_BASE = "https://generativelanguage.googleapis.com/v1beta";
+
+/**
+ * Create a cached context with video + system prompt + tool declarations.
+ * The cache stores the expensive video tokens so they're reused across iterations.
+ */
+export async function createGeminiCache(
+  apiKey: string,
+  model: string,
+  fileUri: string,
+  fileMimeType: string,
+  systemPrompt: string,
+  toolDeclarations: GeminiToolDeclaration[],
+  ttlSeconds: number = 300
+): Promise<GeminiCacheResult> {
+  const url = `${GEMINI_BASE}/cachedContents?key=${apiKey}`;
+
+  const requestBody = {
+    model: `models/${model}`,
+    contents: [
+      {
+        role: "user",
+        parts: [
+          { fileData: { fileUri, mimeType: fileMimeType } },
+        ],
+      },
+    ],
+    systemInstruction: {
+      parts: [{ text: systemPrompt }],
+    },
+    tools: [{ functionDeclarations: toolDeclarations }],
+    toolConfig: { functionCallingConfig: { mode: "AUTO" } },
+    ttl: `${ttlSeconds}s`,
+  };
+
+  const response = await fetch(url, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(requestBody),
+  });
+
+  if (!response.ok) {
+    const errorText = await response.text();
+    throw new Error(`Failed to create Gemini cache: ${response.status} ${response.statusText} - ${errorText}`);
+  }
+
+  const result = await response.json();
+
+  if (!result.name) {
+    throw new Error("Cache creation succeeded but no name returned");
+  }
+
+  return { cacheName: result.name };
+}
+
+/**
+ * Refresh cache TTL to prevent expiry during long analysis sessions
+ */
+export async function refreshGeminiCacheTTL(
+  apiKey: string,
+  cacheName: string,
+  ttlSeconds: number = 300
+): Promise<void> {
+  const url = `${GEMINI_BASE}/${cacheName}?key=${apiKey}`;
+
+  const response = await fetch(url, {
+    method: "PATCH",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ ttl: `${ttlSeconds}s` }),
+  });
+
+  if (!response.ok) {
+    const errorText = await response.text();
+    console.warn(`Failed to refresh cache TTL: ${response.status} - ${errorText}`);
+  }
+}
+
+/**
+ * Delete a cached context to free resources
+ */
+export async function deleteGeminiCache(
+  apiKey: string,
+  cacheName: string
+): Promise<void> {
+  const url = `${GEMINI_BASE}/${cacheName}?key=${apiKey}`;
+
+  const response = await fetch(url, { method: "DELETE" });
+
+  if (!response.ok) {
+    console.warn(`Failed to delete cache: ${response.status}`);
+  }
+}
+
+// ============================================
+// Multi-Turn Generation with Cache (for Agent)
+// ============================================
+
+/**
+ * Generate content using a cached context with multi-turn conversation.
+ * Supports tool/function calling - returns raw response with function calls.
+ */
+export async function generateContentWithCache(
+  apiKey: string,
+  model: string,
+  cacheName: string,
+  messages: GeminiMessage[]
+): Promise<GeminiMultiTurnResponse> {
+  const url = `${GEMINI_BASE}/models/${model}:generateContent?key=${apiKey}`;
+
+  const requestBody = {
+    cachedContent: cacheName,
+    contents: messages,
+    // Tools and toolConfig are in the cache, not here
+  };
+
+  const response = await fetch(url, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(requestBody),
+  });
+
+  if (!response.ok) {
+    const errorText = await response.text();
+    const error = new Error(
+      `Gemini API error: ${response.status} ${response.statusText} - ${errorText}`
+    ) as Error & { status: number };
+    error.status = response.status;
+    throw error;
+  }
+
+  return await response.json();
 }
