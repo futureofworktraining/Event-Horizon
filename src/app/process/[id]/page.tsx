@@ -2,7 +2,7 @@
 "use client";
 
 import { useState, useCallback, useEffect, useRef } from "react";
-import { useQuery, useMutation } from "convex/react";
+import { useQuery, useMutation, useAction } from "convex/react";
 import { api } from "../../../../convex/_generated/api";
 import { useParams, useRouter } from "next/navigation";
 import { ProcessHeader } from "@/components/pdd/ProcessHeader";
@@ -12,18 +12,29 @@ import { ProcessingStatus } from "@/components/pdd/ProcessingStatus";
 import { ScreenshotExtractor } from "@/components/pdd/ScreenshotExtractor";
 import { BoundingBoxDetector } from "@/components/pdd/BoundingBoxDetector";
 import { SensitiveInfoDetector } from "@/components/pdd/SensitiveInfoDetector";
-import { AnalysisPromptEditor } from "@/components/pdd/AnalysisPromptEditor";
+import { AgentPanel } from "@/components/pdd/AgentPanel";
 import { AutoProcessingOrchestrator } from "@/components/pdd/AutoProcessingOrchestrator";
-import { PddGenerationToast } from "@/components/pdd/PddGenerationToast";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
+import { Checkbox } from "@/components/ui/checkbox";
+import { Label } from "@/components/ui/label";
+import { Input } from "@/components/ui/input";
 import {
   FlowchartViewer,
   ProcessNavigator,
   ProcessBreadcrumbs,
 } from "@/components/flowchart";
+import { cn } from "@/lib/utils";
 import Link from "next/link";
-import { Workflow, List, ChevronDown, ChevronUp, Settings2, RefreshCw, Target, ShieldAlert, FileText, Loader2 } from "lucide-react";
+import { Workflow, List, ChevronDown, ChevronUp, Settings2, RefreshCw, Target, ShieldAlert, Loader2, History, Eye, Image, Box, Lock } from "lucide-react";
 import { toast } from "sonner";
 
 type ViewMode = "flowchart" | "list";
@@ -47,11 +58,17 @@ export default function ProcessPage() {
   // Collapsible sections state
   const [showBoundingBoxSection, setShowBoundingBoxSection] = useState(false);
   const [showSensitiveInfoSection, setShowSensitiveInfoSection] = useState(false);
-  const [showPromptSection, setShowPromptSection] = useState(false);
 
   // Re-analyze state
   const [isReanalyzing, setIsReanalyzing] = useState(false);
   const [reanalyzeError, setReanalyzeError] = useState<string | null>(null);
+  const [showReanalyzeDialog, setShowReanalyzeDialog] = useState(false);
+
+  // Re-analyze options state (initialized from current job settings)
+  const [reanalyzeScreenshots, setReanalyzeScreenshots] = useState(true);
+  const [reanalyzeBoundingBoxes, setReanalyzeBoundingBoxes] = useState(true);
+  const [reanalyzeSensitiveInfo, setReanalyzeSensitiveInfo] = useState(false);
+  const [reanalyzeSensitivePrompt, setReanalyzeSensitivePrompt] = useState("");
 
   // Status tracking since last render
   const prevJobStatus = useRef<string | null>(null);
@@ -59,6 +76,13 @@ export default function ProcessPage() {
   // Subprocess fix state
   const [isFixingSubprocess, setIsFixingSubprocess] = useState(false);
   const fixSubprocessRefs = useMutation(api.flows.fixSubprocessReferences);
+
+  // Re-analyze action
+  const reanalyzeJob = useAction(api.reanalyze.reanalyzeJob);
+
+  // Version history state
+  const [showVersionHistory, setShowVersionHistory] = useState(false);
+  const [viewingVersion, setViewingVersion] = useState<string | null>(null);
 
   useEffect(() => {
     setMounted(true);
@@ -85,8 +109,45 @@ export default function ProcessPage() {
     process?.job?._id ? { jobId: process.job._id } : "skip"
   );
 
-  // Job status monitoring for notifications
-   
+  // Query for version history
+  const versionHistory = useQuery(
+    api.analysisVersions.getVersionsForJob,
+    process?.job?._id ? { jobId: process.job._id } : "skip"
+  );
+
+  // Check if re-analysis is in progress (job processing but has existing process data)
+  const isReanalysisInProgress = process?.job?.status === "processing" && !!process?.processName;
+
+  // Check if job is actively processing (first analysis or re-analysis)
+  const isJobActive = process?.job?.status === "processing" || process?.job?.status === "pending";
+
+  // Agent panel state - open by default when job is active
+  const [isAgentPanelOpen, setIsAgentPanelOpen] = useState(false);
+  const agentPanelInitialized = useRef(false);
+
+  // Initialize panel state when process data first loads
+  useEffect(() => {
+    if (process?.job && !agentPanelInitialized.current) {
+      agentPanelInitialized.current = true;
+      setIsAgentPanelOpen(!!isJobActive);
+    }
+  }, [process?.job, isJobActive]);
+
+
+
+  // Check if this is the main process (not a subprocess)
+  const isMainProcess = process?.isMainProcess !== false && !process?.parentProcessId;
+
+  // Initialize re-analyze options from current job settings
+  useEffect(() => {
+    if (process?.job) {
+      setReanalyzeScreenshots(process.job.autoExtractScreenshots ?? true);
+      setReanalyzeBoundingBoxes(process.job.autoBoundingBoxes ?? true);
+      setReanalyzeSensitiveInfo(process.job.autoSensitiveInfo ?? false);
+      setReanalyzeSensitivePrompt(process.job.sensitiveInfoPrompt ?? "");
+    }
+  }, [process?.job]);
+
   // Job status monitoring for notifications
    
   useEffect(() => {
@@ -238,32 +299,6 @@ export default function ProcessPage() {
     );
   }
 
-  // Check if job is still processing
-  if (process.job && (process.job.status === "pending" || process.job.status === "processing")) {
-    return (
-      <div className="container mx-auto px-4 py-8">
-        <div className="w-full mx-auto space-y-6">
-          <div className="flex items-center gap-2">
-            <Link href="/projects" className="text-muted-foreground hover:text-foreground">
-              Projects
-            </Link>
-            <span className="text-muted-foreground">/</span>
-            <span>Processing</span>
-          </div>
-          <ProcessingStatus
-            status={process.job.status}
-            progress={process.job.progress}
-            errorMessage={process.job.errorMessage}
-          />
-        </div>
-        {/* PDD Generation Toast */}
-        {process.job._id && (
-          <PddGenerationToast jobId={process.job._id} />
-        )}
-      </div>
-    );
-  }
-
   // Check for failed job
   if (process.job && process.job.status === "failed") {
     return (
@@ -279,6 +314,7 @@ export default function ProcessPage() {
           <ProcessingStatus
             status="failed"
             errorMessage={process.job.errorMessage}
+            jobId={process.job._id}
           />
           <div className="text-center">
             <Link href="/upload">
@@ -294,7 +330,25 @@ export default function ProcessPage() {
   const hasFlow = process.flow && process.flow.nodes && process.flow.nodes.length > 0;
 
   return (
-    <div className="p-8">
+    <div className="flex h-full relative">
+    <div className={cn("flex-1 overflow-auto p-8 transition-all duration-300",
+      isAgentPanelOpen ? "pr-[416px]" : process?.job?._id ? "pr-20" : ""
+    )}>
+      {/* Re-analysis in progress banner */}
+      {isReanalysisInProgress && (
+        <div className="mb-6 p-4 bg-blue-50 border border-blue-200 rounded-lg">
+          <div className="flex items-center gap-3">
+            <Loader2 className="w-5 h-5 text-blue-600 animate-spin" />
+            <div>
+              <p className="font-medium text-blue-900">Re-analysis in progress</p>
+              <p className="text-sm text-blue-700">
+                A new analysis is running. You can view the current version below, but editing is disabled until the new analysis completes.
+              </p>
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* Header section */}
       <div className="w-full space-y-6">
         {/* Breadcrumbs - hierarchy navigation */}
@@ -456,33 +510,9 @@ export default function ProcessPage() {
                 )}
               </div>
 
-              {/* Analysis Prompt Editor - Collapsible */}
-              <div className="border rounded-lg">
-                <button
-                  onClick={() => setShowPromptSection(!showPromptSection)}
-                  className="w-full flex items-center justify-between p-3 hover:bg-muted/50 transition-colors"
-                >
-                  <div className="flex items-center gap-2">
-                    <FileText className="w-4 h-4 text-purple-600" />
-                    <span className="font-medium">Analysis Prompt</span>
-                    <span className="text-xs text-muted-foreground">(Advanced)</span>
-                  </div>
-                  {showPromptSection ? (
-                    <ChevronUp className="w-4 h-4" />
-                  ) : (
-                    <ChevronDown className="w-4 h-4" />
-                  )}
-                </button>
-                {showPromptSection && (
-                  <div className="p-4 border-t bg-gray-50/50">
-                    <AnalysisPromptEditor jobId={process.job?._id} processId={process._id} />
-                  </div>
-                )}
-              </div>
-
-              {/* Re-analyze Button */}
-              {process.job?.videoStorageId && (
-                <div className="pt-2 border-t">
+              {/* Re-analyze Button - Only for main process */}
+              {process.job?.videoStorageId && isMainProcess && (
+                <div className="pt-2 border-t space-y-3">
                   <div className="flex items-center justify-between">
                     <div>
                       <p className="text-sm font-medium">Re-analyze Video</p>
@@ -493,16 +523,8 @@ export default function ProcessPage() {
                     <Button
                       variant="outline"
                       size="sm"
-                      disabled={isReanalyzing}
-                      onClick={() => {
-                        // TODO: Implement re-analyze functionality
-                        setIsReanalyzing(true);
-                        setReanalyzeError(null);
-                        // For now, just simulate
-                        setTimeout(() => {
-                          setIsReanalyzing(false);
-                        }, 2000);
-                      }}
+                      disabled={isReanalyzing || process.job?.status === "processing"}
+                      onClick={() => setShowReanalyzeDialog(true)}
                     >
                       {isReanalyzing ? (
                         <>
@@ -520,11 +542,222 @@ export default function ProcessPage() {
                   {reanalyzeError && (
                     <p className="text-sm text-red-600 mt-2">{reanalyzeError}</p>
                   )}
+
+                  {/* Re-analyze Options Dialog */}
+                  <Dialog open={showReanalyzeDialog} onOpenChange={setShowReanalyzeDialog}>
+                    <DialogContent className="sm:max-w-md">
+                      <DialogHeader>
+                        <DialogTitle>Re-analyze Video</DialogTitle>
+                        <DialogDescription>
+                          Configure options for the new analysis. Current version will be archived.
+                        </DialogDescription>
+                      </DialogHeader>
+                      <div className="space-y-4 py-4">
+                        <div className="flex items-center space-x-3">
+                          <Checkbox
+                            id="screenshots"
+                            checked={reanalyzeScreenshots}
+                            onCheckedChange={(checked) => setReanalyzeScreenshots(checked as boolean)}
+                          />
+                          <div className="flex items-center gap-2">
+                            <Image className="w-4 h-4 text-muted-foreground" />
+                            <Label htmlFor="screenshots" className="cursor-pointer">
+                              Auto-extract screenshots
+                            </Label>
+                          </div>
+                        </div>
+                        <div className="flex items-center space-x-3">
+                          <Checkbox
+                            id="boundingBoxes"
+                            checked={reanalyzeBoundingBoxes}
+                            onCheckedChange={(checked) => setReanalyzeBoundingBoxes(checked as boolean)}
+                          />
+                          <div className="flex items-center gap-2">
+                            <Box className="w-4 h-4 text-muted-foreground" />
+                            <Label htmlFor="boundingBoxes" className="cursor-pointer">
+                              Auto-detect UI elements (bounding boxes)
+                            </Label>
+                          </div>
+                        </div>
+                        <div className="flex items-center space-x-3">
+                          <Checkbox
+                            id="sensitiveInfo"
+                            checked={reanalyzeSensitiveInfo}
+                            onCheckedChange={(checked) => setReanalyzeSensitiveInfo(checked as boolean)}
+                          />
+                          <div className="flex items-center gap-2">
+                            <Lock className="w-4 h-4 text-muted-foreground" />
+                            <Label htmlFor="sensitiveInfo" className="cursor-pointer">
+                              Auto-detect sensitive information
+                            </Label>
+                          </div>
+                        </div>
+                        {reanalyzeSensitiveInfo && (
+                          <div className="ml-7 space-y-2">
+                            <Label htmlFor="sensitivePrompt" className="text-sm">
+                              Sensitive info description (optional)
+                            </Label>
+                            <Input
+                              id="sensitivePrompt"
+                              placeholder="e.g., SSN, credit card numbers, passwords..."
+                              value={reanalyzeSensitivePrompt}
+                              onChange={(e) => setReanalyzeSensitivePrompt(e.target.value)}
+                            />
+                          </div>
+                        )}
+                      </div>
+                      <DialogFooter>
+                        <Button variant="outline" onClick={() => setShowReanalyzeDialog(false)}>
+                          Cancel
+                        </Button>
+                        <Button
+                          onClick={async () => {
+                            if (!process.job?._id) return;
+
+                            setShowReanalyzeDialog(false);
+                            setIsReanalyzing(true);
+                            setReanalyzeError(null);
+
+                            try {
+                              toast.info("Starting re-analysis...", {
+                                description: "Current analysis will be archived"
+                              });
+
+                              await reanalyzeJob({
+                                jobId: process.job._id,
+                                autoExtractScreenshots: reanalyzeScreenshots,
+                                autoBoundingBoxes: reanalyzeBoundingBoxes,
+                                autoSensitiveInfo: reanalyzeSensitiveInfo,
+                                sensitiveInfoPrompt: reanalyzeSensitiveInfo ? reanalyzeSensitivePrompt : undefined,
+                              });
+
+                              toast.success("Re-analysis started", {
+                                description: "The video is being analyzed again"
+                              });
+                            } catch (error) {
+                              const errorMessage = error instanceof Error ? error.message : "Failed to start re-analysis";
+                              setReanalyzeError(errorMessage);
+                              const isApiKeyError = errorMessage.toLowerCase().includes("gemini api key not configured");
+                              if (isApiKeyError) {
+                                toast.error("Gemini API key not configured", {
+                                  description: "Get your free API key at aistudio.google.com/apikey, then add it in Settings.",
+                                  duration: 10000,
+                                  action: {
+                                    label: "Open Settings",
+                                    onClick: () => window.location.href = "/settings",
+                                  },
+                                });
+                              } else {
+                                toast.error("Re-analysis failed", {
+                                  description: errorMessage
+                                });
+                              }
+                            } finally {
+                              setIsReanalyzing(false);
+                            }
+                          }}
+                        >
+                          Start Re-analysis
+                        </Button>
+                      </DialogFooter>
+                    </DialogContent>
+                  </Dialog>
+
+                  {/* Version History Section */}
+                  {versionHistory && versionHistory.length > 0 && (
+                    <div className="border-t pt-3">
+                      <button
+                        onClick={() => setShowVersionHistory(!showVersionHistory)}
+                        className="w-full flex items-center justify-between py-2 text-left hover:bg-gray-50 rounded-md px-2 -mx-2"
+                      >
+                        <div className="flex items-center gap-2">
+                          <History className="w-4 h-4 text-muted-foreground" />
+                          <span className="text-sm font-medium">Version History</span>
+                          <span className="text-xs bg-gray-100 px-2 py-0.5 rounded-full">
+                            {versionHistory.length} version{versionHistory.length !== 1 ? "s" : ""}
+                          </span>
+                        </div>
+                        {showVersionHistory ? (
+                          <ChevronUp className="w-4 h-4" />
+                        ) : (
+                          <ChevronDown className="w-4 h-4" />
+                        )}
+                      </button>
+
+                      {showVersionHistory && (
+                        <div className="mt-2 space-y-2">
+                          {versionHistory.map((version) => (
+                            <div
+                              key={version._id}
+                              className={`p-3 border rounded-lg text-sm ${
+                                version.isCurrent ? "border-blue-200 bg-blue-50/50" : "bg-gray-50/50"
+                              }`}
+                            >
+                              <div className="flex items-center justify-between mb-1">
+                                <span className="font-medium">
+                                  Version {version.versionNumber}
+                                  {version.isCurrent && (
+                                    <span className="ml-2 text-xs bg-blue-100 text-blue-700 px-2 py-0.5 rounded-full">
+                                      Current
+                                    </span>
+                                  )}
+                                </span>
+                                <div className="flex items-center gap-2">
+                                  <Button
+                                    variant="ghost"
+                                    size="sm"
+                                    className="h-7 px-2"
+                                    onClick={() => setViewingVersion(viewingVersion === version._id ? null : version._id)}
+                                  >
+                                    <Eye className="w-3.5 h-3.5 mr-1" />
+                                    {viewingVersion === version._id ? "Hide" : "View"}
+                                  </Button>
+                                  <span className="text-xs text-muted-foreground">
+                                    {new Date(version.createdAt).toLocaleString()}
+                                  </span>
+                                </div>
+                              </div>
+                              <div className="text-xs text-muted-foreground">
+                                <span>{version.totalSteps} steps</span>
+                                <span className="mx-2">|</span>
+                                <span>{version.processName}</span>
+                              </div>
+                              {/* Expanded version details */}
+                              {viewingVersion === version._id && (
+                                <div className="mt-3 pt-3 border-t space-y-3">
+                                  <div className="text-xs">
+                                    <p className="font-medium mb-2">Steps in this version:</p>
+                                    <div className="max-h-60 overflow-y-auto space-y-1 bg-white rounded border p-2">
+                                      {(() => {
+                                        try {
+                                          const steps = JSON.parse(version.stepsSnapshot);
+                                          return steps.map((step: any, idx: number) => (
+                                            <div key={idx} className="flex gap-2 py-1 border-b last:border-0">
+                                              <span className="font-medium text-gray-500 w-6">{step.stepNumber}.</span>
+                                              <span className="flex-1">{step.description}</span>
+                                              <span className="text-gray-400">{step.timestamp}</span>
+                                            </div>
+                                          ));
+                                        } catch {
+                                          return <p className="text-muted-foreground">Unable to load steps</p>;
+                                        }
+                                      })()}
+                                    </div>
+                                  </div>
+                                </div>
+                              )}
+                            </div>
+                          ))}
+                        </div>
+                      )}
+                    </div>
+                  )}
                 </div>
               )}
             </CardContent>
           </Card>
         )}
+
       </div>
 
       {/* View Mode Toggle & Flowchart/List Section */}
@@ -587,11 +820,27 @@ export default function ProcessPage() {
           )}
         </div>
 
+        {/* Live-mode indicator */}
+        {isJobActive && !isReanalysisInProgress && (
+          <div className="flex items-center gap-2 text-sm text-amber-600 mb-4">
+            <Loader2 className="w-4 h-4 animate-spin" />
+            <span>Analysis in progress — steps update live</span>
+          </div>
+        )}
+
         {/* Main Content Area */}
         <div>
           {/* Flowchart or List View */}
           <div className="w-full">
-            {viewMode === "flowchart" ? (
+            {(!process.steps || process.steps.length === 0) && isJobActive ? (
+              <Card>
+                <CardContent className="py-12 text-center text-muted-foreground">
+                  <Loader2 className="w-8 h-8 mx-auto mb-3 animate-spin text-amber-500" />
+                  <p>Agent is analyzing the video...</p>
+                  <p className="text-sm mt-1">Steps will appear here as they are identified.</p>
+                </CardContent>
+              </Card>
+            ) : viewMode === "flowchart" ? (
               <Card>
                 <CardHeader className="pb-2">
                   <CardTitle className="text-lg flex items-center gap-2">
@@ -633,6 +882,7 @@ export default function ProcessPage() {
                 flowEdges={process.flow?.edges}
                 subprocesses={process.subprocesses}
                 onSubprocessClick={handleSubprocessClick}
+                readOnly={isReanalysisInProgress || !!isJobActive}
               />
             )}
           </div>
@@ -641,11 +891,19 @@ export default function ProcessPage() {
 
       {/* Auto-processing orchestrator - handles screenshots and bounding boxes automatically */}
       {process.job?._id && (
-        <>
-          <AutoProcessingOrchestrator jobId={process.job._id} />
-          <PddGenerationToast jobId={process.job._id} />
-        </>
+        <AutoProcessingOrchestrator jobId={process.job._id} />
       )}
+    </div>
+
+    {/* Agent Panel - right side */}
+    {process.job?._id && (
+      <AgentPanel
+        jobId={process.job._id}
+        isOpen={isAgentPanelOpen}
+        onToggle={() => setIsAgentPanelOpen(prev => !prev)}
+        videoStorageId={process.job.videoStorageId}
+      />
+    )}
     </div>
   );
 }

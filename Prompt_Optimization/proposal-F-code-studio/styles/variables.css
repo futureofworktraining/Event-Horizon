@@ -1,0 +1,141 @@
+/* CSS Variables - Code Studio (Minimalist Neo Light Theme) */
+:root {
+  /* Core Colors - Inspired by Root App Light Theme */
+  --bg-primary: #ffffff;
+  --bg-secondary: #fafafa;
+  --bg-tertiary: #f4f4f5;
+  --bg-accent: #f4f4f5;
+  
+  /* Neo-Brutalist Core */
+  --border-color: #18181b; /* Zinc 950 */
+  --border-width: 2px;
+  --border-width-thin: 1px;
+  
+  /* Text */
+  --text-primary: #18181b;
+  --text-secondary: #3f3f46;
+  --text-muted: #71717a;
+  --text-code: #18181b;
+  
+  /* Syntax Highlighting Tokens (Light) */
+  --text-code-comment: #a1a1aa;
+  --text-code-keyword: #000000;
+  --text-code-string: #10b981;
+  --text-code-function: #3b82f6;
+  --text-code-number: #f59e0b;
+  --text-code-type: #8b5cf6;
+  
+  /* Brand & Accents (Root App Chart Colors/Accents) */
+  --accent-primary: #000000;
+  --accent-secondary: #18181b;
+  --accent-hover: #27272a;
+  --accent-light: #e4e4e7;
+  
+  /* Action Colors */
+  --accent-success: #10b981;
+  --accent-warning: #fbbf24;
+  --accent-error: #ef4444;
+  --accent-info: #3b82f6;
+
+  /* Diff colors (Light Theme Modern) */
+  --diff-added-bg: #ecfdf5;
+  --diff-added-border: #10b981;
+  --diff-removed-bg: #fef2f2;
+  --diff-removed-border: #ef4444;
+  --diff-changed-bg: #fffbeb;
+  --diff-changed-border: #fbbf24;
+
+  /* Subprocess Colors (Root App Pop Colors) */
+  --subprocess-1: #fbbf24;
+  --subprocess-2: #8b5cf6;
+  --subprocess-3: #10b981;
+
+  /* Log Level Colors */
+  --log-info: #3b82f6;
+  --log-success: #10b981;
+  --log-warning: #fbbf24;
+  --log-error: #ef4444;
+  --log-debug: #8b5cf6;
+
+  /* Spacing System */
+  --spacing-xs: 4px;
+  --spacing-sm: 8px;
+  --spacing-md: 12px;
+  --spacing-lg: 16px;
+  --spacing-xl: 24px;
+  --spacing-2xl: 32px;
+
+  /* Typography */
+  --font-sans: "Plus Jakarta Sans", 'Inter', system-ui, sans-serif;
+  --font-mono: 'JetBrains Mono', 'Fira Code', monospace;
+  --font-size-xs: 0.75rem;
+  --font-size-sm: 0.8125rem;
+  --font-size-base: 0.875rem;
+  --font-size-lg: 1rem;
+  --font-size-xl: 1.25rem;
+
+  /* Transitions */
+  --transition-fast: 100ms ease;
+  --transition-normal: 200ms ease;
+  
+  /* Neo-Brutalist Hard Shadows */
+  --shadow-sm: 2px 2px 0px 0px var(--border-color);
+  --shadow-md: 4px 4px 0px 0px var(--border-color);
+  --shadow-lg: 6px 6px 0px 0px var(--border-color);
+  --shadow-premium: 4px 4px 0px 0px var(--accent-primary);
+  --shadow-drawer: -8px 0 0px 0px var(--border-color);
+
+  /* Layout Constants */
+  --header-height: 56px;
+  --toolbar-height: 44px;
+  --drawer-width: 60%;
+  --sidebar-width: 280px;
+  --radius-sm: 0; 
+  --radius-md: 4px;
+  --radius-lg: 8px;
+}
+
+/* Code Themes */
+/* Quiet Light (VS Code Default Light) */
+:root, [data-code-theme="quiet-light"] {
+  --bg-code: #f5f5f5;
+  --bg-code-light: #e0e0e0;
+  --text-code: #333333;
+  --text-code-comment: #aaaaaa;
+  --text-code-keyword: #4b69c6;
+  --text-code-string: #448c27;
+  --text-code-function: #7a3e9d;
+  --text-code-number: #ab6526;
+  --text-code-type: #7a3e9d;
+}
+
+/* Dracula (VS Code Dark) */
+[data-code-theme="dracula"] {
+  --bg-code: #282a36;
+  --bg-code-light: #44475a;
+  --text-code: #f8f8f2;
+  --text-code-comment: #6272a4;
+  --text-code-keyword: #ff79c6;
+  --text-code-string: #f1fa8c;
+  --text-code-function: #50fa7b;
+  --text-code-number: #bd93f9;
+  --text-code-type: #8be9fd;
+}
+
+/* Matcha */
+[data-code-theme="matcha"] {
+  --bg-code: #ecf0eb;
+  --bg-code-light: #dbe4dd;
+  --text-code: #5c6e74;
+  --text-code-comment: #90aca6;
+  --text-code-keyword: #6a9c6c;
+  --text-code-string: #cfa86e;
+  --text-code-function: #82a893;
+  --text-code-number: #cc8b65;
+  --text-code-type: #aeb8bf;
+}
+
+/* Hard Shadows & Layout Extras */
+.shadow-hard {
+  box-shadow: 4px 4px 0px 0px var(--border-color);
+}

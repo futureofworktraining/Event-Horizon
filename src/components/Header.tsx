@@ -1,7 +1,7 @@
 /* eslint-disable react-hooks/exhaustive-deps, react-hooks/set-state-in-effect */
 "use client";
 
-import { Bell, Search, User, ChevronDown, Settings, LogOut } from "lucide-react";
+import { Search, User, ChevronDown, Settings, LogOut } from "lucide-react";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -15,6 +15,7 @@ import { Input } from "@/components/ui/input";
 import { useRouter, usePathname, useSearchParams } from "next/navigation";
 import { useState, useEffect } from "react";
 import { ApiLogsDropdown } from "./ApiLogsDropdown";
+import { HelpDialog } from "./HelpDialog";
 
 export function Header() {
   const router = useRouter();
@@ -68,11 +69,8 @@ export function Header() {
         {/* API Usage & Costs */}
         <ApiLogsDropdown />
 
-        {/* Notifications */}
-        <Button variant="ghost" size="icon" className="relative">
-          <Bell className="w-5 h-5" />
-          <span className="absolute top-1.5 right-1.5 w-2 h-2 bg-chart-4 rounded-full border border-background" />
-        </Button>
+        {/* Help / Instructions */}
+        <HelpDialog />
 
         {/* User menu */}
         <DropdownMenu>

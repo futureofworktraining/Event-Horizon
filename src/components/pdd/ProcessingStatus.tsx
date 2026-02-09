@@ -2,14 +2,17 @@
 
 import { Card, CardContent } from "@/components/ui/card";
 import { Progress } from "@/components/ui/progress";
+import { AgentActivityView } from "./AgentActivityView";
+import { Id } from "../../../convex/_generated/dataModel";
 
 interface ProcessingStatusProps {
   status: string;
   progress?: number;
   errorMessage?: string;
+  jobId?: Id<"jobs">;
 }
 
-export function ProcessingStatus({ status, progress, errorMessage }: ProcessingStatusProps) {
+export function ProcessingStatus({ status, progress, errorMessage, jobId }: ProcessingStatusProps) {
   if (status === "failed") {
     return (
       <Card className="border-destructive">
@@ -41,6 +44,11 @@ export function ProcessingStatus({ status, progress, errorMessage }: ProcessingS
     );
   }
 
+  // When jobId is provided, show the rich agent activity view
+  if (jobId && (status === "pending" || status === "processing")) {
+    return <AgentActivityView jobId={jobId} />;
+  }
+
   return (
     <Card>
       <CardContent className="pt-6">
@@ -63,12 +71,12 @@ export function ProcessingStatus({ status, progress, errorMessage }: ProcessingS
 
           <div className="text-center space-y-2">
             <h3 className="text-xl font-semibold">
-              {status === "pending" ? "Preparing Analysis..." : "Analyzing Video..."}
+              {status === "pending" ? "Preparing Analysis..." : "AI Agent Analyzing Video..."}
             </h3>
             <p className="text-sm text-muted-foreground max-w-md">
               {status === "pending"
                 ? "Your video is being prepared for analysis."
-                : "AI is analyzing the screen recording to extract process steps. This may take a few minutes."}
+                : "The AI agent is iteratively analyzing the screen recording to build a detailed Process Design Document."}
             </p>
           </div>
 
@@ -80,12 +88,10 @@ export function ProcessingStatus({ status, progress, errorMessage }: ProcessingS
               </p>
               <p className="text-xs text-center text-muted-foreground">
                 {progress <= 10 && "Downloading video..."}
-                {progress > 10 && progress <= 20 && "Video downloaded, preparing..."}
-                {progress > 20 && progress <= 35 && "Uploading video to Gemini..."}
-                {progress > 35 && progress <= 45 && "Processing video in Gemini..."}
-                {progress > 45 && progress <= 60 && "AI is analyzing screen recording (this may take a few minutes)..."}
-                {progress > 60 && progress <= 65 && "Parsing AI response..."}
-                {progress > 65 && progress <= 90 && "Creating processes and steps..."}
+                {progress > 10 && progress <= 15 && "Uploading video to Gemini..."}
+                {progress > 15 && progress <= 20 && "Processing video in Gemini..."}
+                {progress > 20 && progress <= 25 && "Creating context cache..."}
+                {progress > 25 && progress <= 90 && "Agent is analyzing and building PDD..."}
                 {progress > 90 && progress < 100 && "Finalizing..."}
               </p>
             </div>

@@ -64,11 +64,23 @@ export const getProcessWithFlow = query({
       })
     );
 
-    // Get subprocesses (child processes)
+    // Get subprocesses (child processes), sorted by video timestamp
     const subprocesses = await ctx.db
       .query("processes")
       .withIndex("by_parent", (q) => q.eq("parentProcessId", args.processId))
       .collect();
+
+    subprocesses.sort((a, b) => {
+      const parseTs = (ts?: string) => {
+        if (!ts) return Infinity;
+        const parts = ts.split(":");
+        if (parts.length === 2) return parseFloat(parts[0]) * 60 + parseFloat(parts[1]);
+        return Infinity;
+      };
+      const diff = parseTs(a.videoStartTimestamp) - parseTs(b.videoStartTimestamp);
+      if (diff !== 0) return diff;
+      return a._creationTime - b._creationTime;
+    });
 
     // Calculate total steps including all subprocesses
     let totalStepsAllProcesses = steps.length;
@@ -107,12 +119,27 @@ export const getProcessesForJob = query({
     // Get top-level processes (no parent)
     const topLevelProcesses = allProcesses.filter(p => !p.parentProcessId);
 
+    // Helper to parse video timestamp to seconds
+    const parseTs = (ts?: string) => {
+      if (!ts) return Infinity;
+      const parts = ts.split(":");
+      if (parts.length === 2) return parseFloat(parts[0]) * 60 + parseFloat(parts[1]);
+      return Infinity;
+    };
+
     // Build hierarchy
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const buildHierarchy = async (parentId: string | null): Promise<any[]> => {
       const children = allProcesses.filter(p =>
         parentId ? p.parentProcessId?.toString() === parentId : !p.parentProcessId
       );
+
+      // Sort children by video start timestamp
+      children.sort((a, b) => {
+        const diff = parseTs(a.videoStartTimestamp) - parseTs(b.videoStartTimestamp);
+        if (diff !== 0) return diff;
+        return a._creationTime - b._creationTime;
+      });
 
       return Promise.all(children.map(async (process) => {
         const flow = await ctx.db
@@ -166,17 +193,37 @@ export const getProcessHierarchy = query({
       }
     }
 
+    // Helper to parse video timestamp to seconds
+    const parseTs = (ts?: string) => {
+      if (!ts) return Infinity;
+      const parts = ts.split(":");
+      if (parts.length === 2) return parseFloat(parts[0]) * 60 + parseFloat(parts[1]);
+      return Infinity;
+    };
+
     // Get siblings (other processes with same parent)
     const siblings = await ctx.db
       .query("processes")
       .withIndex("by_parent", (q) => q.eq("parentProcessId", process.parentProcessId))
       .collect();
 
+    siblings.sort((a, b) => {
+      const diff = parseTs(a.videoStartTimestamp) - parseTs(b.videoStartTimestamp);
+      if (diff !== 0) return diff;
+      return a._creationTime - b._creationTime;
+    });
+
     // Get children
     const children = await ctx.db
       .query("processes")
       .withIndex("by_parent", (q) => q.eq("parentProcessId", args.processId))
       .collect();
+
+    children.sort((a, b) => {
+      const diff = parseTs(a.videoStartTimestamp) - parseTs(b.videoStartTimestamp);
+      if (diff !== 0) return diff;
+      return a._creationTime - b._creationTime;
+    });
 
     return {
       process,
@@ -456,6 +503,142 @@ export const updateFlowSubprocessIds = internalMutation({
 
     console.log(`Updated subprocess IDs in ${updatedCount} flow(s)`);
     return { updatedFlows: updatedCount };
+  },
+});
+
+// Clean up orphan flow nodes (action nodes referencing non-existent steps)
+// This fixes the issue where flowchart shows empty steps that don't exist in the steps list
+export const cleanupOrphanFlowNodes = mutation({
+  args: {
+    processId: v.id("processes"),
+  },
+  handler: async (ctx, args) => {
+    // Get the flow for this process
+    const flow = await ctx.db
+      .query("processFlows")
+      .withIndex("by_process", (q) => q.eq("processId", args.processId))
+      .first();
+
+    if (!flow) {
+      return { success: false, message: "No flow found for this process" };
+    }
+
+    // Get all steps for this process
+    const steps = await ctx.db
+      .query("steps")
+      .withIndex("by_process", (q) => q.eq("processId", args.processId))
+      .collect();
+
+    // Create a set of valid step numbers
+    const validStepNumbers = new Set(steps.map((s) => s.stepNumber));
+
+    // Find orphan nodes (action nodes with stepNumber that doesn't exist in steps)
+    const orphanNodeIds = new Set<string>();
+    const validNodes: any[] = [];
+
+    for (const node of flow.nodes) {
+      if (node.nodeType === "action" && node.stepNumber !== undefined) {
+        if (!validStepNumbers.has(node.stepNumber)) {
+          // This is an orphan node
+          orphanNodeIds.add(node.nodeId);
+          console.log(`Found orphan node: ${node.nodeId} with stepNumber ${node.stepNumber}`);
+        } else {
+          validNodes.push(node);
+        }
+      } else {
+        // Keep non-action nodes (start, end, decision, etc.)
+        validNodes.push(node);
+      }
+    }
+
+    if (orphanNodeIds.size === 0) {
+      return {
+        success: true,
+        message: "No orphan nodes found",
+        removedCount: 0,
+      };
+    }
+
+    // Update edges to bypass orphan nodes
+    // For each edge that connects to an orphan node, we need to reconnect it
+    const nodeIncomingEdges = new Map<string, any[]>(); // nodeId -> edges that target this node
+    const nodeOutgoingEdges = new Map<string, any[]>(); // nodeId -> edges that source from this node
+
+    for (const edge of flow.edges) {
+      if (!nodeIncomingEdges.has(edge.toNodeId)) {
+        nodeIncomingEdges.set(edge.toNodeId, []);
+      }
+      nodeIncomingEdges.get(edge.toNodeId)!.push(edge);
+
+      if (!nodeOutgoingEdges.has(edge.fromNodeId)) {
+        nodeOutgoingEdges.set(edge.fromNodeId, []);
+      }
+      nodeOutgoingEdges.get(edge.fromNodeId)!.push(edge);
+    }
+
+    // Build new edges by bypassing orphan nodes
+    const newEdges: any[] = [];
+    const processedEdges = new Set<string>();
+
+    for (const edge of flow.edges) {
+      if (processedEdges.has(edge.edgeId)) continue;
+
+      // If this edge doesn't involve an orphan node, keep it
+      if (!orphanNodeIds.has(edge.fromNodeId) && !orphanNodeIds.has(edge.toNodeId)) {
+        newEdges.push(edge);
+        processedEdges.add(edge.edgeId);
+        continue;
+      }
+
+      // If the source is an orphan, skip this edge (will be handled by incoming edges)
+      if (orphanNodeIds.has(edge.fromNodeId)) {
+        processedEdges.add(edge.edgeId);
+        continue;
+      }
+
+      // If the target is an orphan, we need to find the next valid node
+      if (orphanNodeIds.has(edge.toNodeId)) {
+        processedEdges.add(edge.edgeId);
+
+        // Follow the chain of orphan nodes to find the next valid target
+        let currentNodeId = edge.toNodeId;
+        const visited = new Set<string>();
+
+        while (orphanNodeIds.has(currentNodeId) && !visited.has(currentNodeId)) {
+          visited.add(currentNodeId);
+          const outgoing = nodeOutgoingEdges.get(currentNodeId);
+          if (outgoing && outgoing.length > 0) {
+            currentNodeId = outgoing[0].toNodeId;
+            processedEdges.add(outgoing[0].edgeId);
+          } else {
+            break;
+          }
+        }
+
+        // If we found a valid target, create a new edge
+        if (!orphanNodeIds.has(currentNodeId) && currentNodeId !== edge.toNodeId) {
+          newEdges.push({
+            ...edge,
+            edgeId: `${edge.fromNodeId}_to_${currentNodeId}`,
+            toNodeId: currentNodeId,
+          });
+        }
+      }
+    }
+
+    // Update the flow with the cleaned up nodes and edges
+    await ctx.db.patch(flow._id, {
+      nodes: validNodes,
+      edges: newEdges,
+      updatedAt: Date.now(),
+    });
+
+    return {
+      success: true,
+      message: `Removed ${orphanNodeIds.size} orphan node(s)`,
+      removedCount: orphanNodeIds.size,
+      removedNodeIds: Array.from(orphanNodeIds),
+    };
   },
 });
 

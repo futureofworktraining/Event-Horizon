@@ -319,6 +319,9 @@ export default defineSchema({
     autoBoundingBoxes: v.optional(v.boolean()), // Auto-detect UI element bounding boxes
     autoSensitiveInfo: v.optional(v.boolean()), // Auto-detect sensitive information
     sensitiveInfoPrompt: v.optional(v.string()), // Prompt for sensitive info detection
+    // Agent analysis mode
+    analysisMode: v.optional(v.union(v.literal("standard"), v.literal("agent"))),
+    agentMaxIterations: v.optional(v.number()),
   })
     .index("by_status", ["status"])
     .index("by_created", ["createdAt"])
@@ -364,6 +367,22 @@ export default defineSchema({
     // NEW: Model selection for AI detection tasks
     uiElementDetectionModel: v.optional(v.string()), // Model for UI element detection (default: gemini-2.5-flash)
     sensitiveInfoDetectionModel: v.optional(v.string()), // Model for sensitive info detection (default: gemini-2.5-flash)
+
+    // NEW: Prompt configuration for analysis (null = use default from settings)
+    promptConfigurationId: v.optional(v.id("promptConfigurations")),
+
+    // NEW: Individual prompt IDs for re-analysis (overrides promptConfigurationId)
+    // NOTE: These reference the legacy tables. New code should use unified prompts table.
+    systemPromptId: v.optional(v.id("systemPrompts")),
+    userPromptId: v.optional(v.id("userPrompts")),
+    jsonSchemaId: v.optional(v.id("jsonSchemas")),
+
+    // NEW: Unified prompt IDs (references new prompts table)
+    unifiedSystemPromptId: v.optional(v.id("prompts")),
+    unifiedUserPromptId: v.optional(v.id("prompts")),
+    unifiedSchemaId: v.optional(v.id("prompts")),
+    uiElementPromptId: v.optional(v.id("prompts")),
+    sensitiveInfoPromptId: v.optional(v.id("prompts")),
 
     // DEPRECATED: Old schema had embedded steps - kept for backward compatibility during migration
     steps: v.optional(v.any()),
@@ -418,6 +437,72 @@ export default defineSchema({
   })
     .index("by_process", ["processId"])
     .index("by_process_step", ["processId", "stepNumber"]),
+
+  // ============================================
+  // AGENT ANALYSIS TABLES
+  // ============================================
+
+  // Agent Events table - stores granular real-time events from the ReAct agent loop
+  agentEvents: defineTable({
+    jobId: v.id("jobs"),
+    eventType: v.union(
+      v.literal("state_changed"),
+      v.literal("thinking"),
+      v.literal("tool_call"),
+      v.literal("tool_result"),
+      v.literal("pdd_updated"),
+      v.literal("progress"),
+      v.literal("completed"),
+      v.literal("error")
+    ),
+    payload: v.string(), // JSON-encoded event data
+    iteration: v.optional(v.number()),
+    createdAt: v.number(),
+  })
+    .index("by_job", ["jobId"])
+    .index("by_job_time", ["jobId", "createdAt"]),
+
+  // Agent Sessions table - tracks agent loop state, tokens, and cost
+  agentSessions: defineTable({
+    jobId: v.id("jobs"),
+    state: v.union(
+      v.literal("idle"),
+      v.literal("uploading"),
+      v.literal("caching"),
+      v.literal("analyzing"),
+      v.literal("completed"),
+      v.literal("error"),
+      v.literal("paused")
+    ),
+    maxIterations: v.number(),
+    iteration: v.number(),
+
+    // Gemini cache state
+    cacheName: v.optional(v.string()),
+    cacheCreatedAt: v.optional(v.number()),
+    cacheTokenCount: v.optional(v.number()),
+
+    // Token accounting
+    inputTokens: v.number(),
+    outputTokens: v.number(),
+    cachedTokens: v.number(),
+    totalCost: v.number(),
+
+    // Timing
+    startedAt: v.optional(v.number()),
+    completedAt: v.optional(v.number()),
+    error: v.optional(v.string()),
+
+    // Process ID mapping (agent temp IDs -> Convex IDs)
+    processIdMap: v.optional(v.string()), // JSON: {"proc-001": "k57abc123..."}
+
+    // Conversation history (for potential resume/debug)
+    conversationHistory: v.optional(v.string()), // JSON-encoded messages array
+
+    // User-requested stop/pause signal
+    stopRequested: v.optional(v.union(v.literal("stop"), v.literal("pause"))),
+  })
+    .index("by_job", ["jobId"]),
 
   // Process Flows table - stores flowchart structure (nodes and edges)
   processFlows: defineTable({
@@ -577,6 +662,155 @@ export default defineSchema({
   })
     .index("by_process", ["processId"])
     .index("by_created", ["createdAt"]),
+
+  // Analysis Versions table - stores version history for re-analysis comparisons
+  analysisVersions: defineTable({
+    jobId: v.id("jobs"),
+    versionNumber: v.number(), // 1, 2, 3... increments with each re-analysis
+    createdAt: v.number(),
+
+    // Snapshots of the analysis data at this version
+    processSnapshot: v.string(), // JSON snapshot of process metadata
+    stepsSnapshot: v.string(), // JSON snapshot of all steps
+    flowSnapshot: v.optional(v.string()), // JSON snapshot of flow data
+    rawAiResponse: v.optional(v.string()), // Raw AI response for this version
+
+    // Summary stats for quick comparison
+    totalSteps: v.number(),
+    processName: v.string(),
+
+    // Is this the current active version?
+    isCurrent: v.boolean(),
+  })
+    .index("by_job", ["jobId"])
+    .index("by_job_version", ["jobId", "versionNumber"])
+    .index("by_job_current", ["jobId", "isCurrent"]),
+
+  // ============================================
+  // PROMPT MANAGEMENT TABLES
+  // ============================================
+
+  // Unified Prompts table - all prompt types in one table
+  prompts: defineTable({
+    type: v.union(
+      v.literal("system"),         // Analysis system prompt
+      v.literal("user"),           // Analysis user prompt
+      v.literal("schema"),         // Analysis JSON schema
+      v.literal("ui_element"),     // UI element detection prompt
+      v.literal("sensitive_info")  // Sensitive info detection prompt
+    ),
+
+    version: v.string(),           // "v1", "v2"
+    versionNumber: v.number(),     // 1, 2 for sorting
+    name: v.string(),              // "Linear Analysis System Prompt V1"
+    description: v.optional(v.string()),
+    content: v.string(),           // The actual prompt content
+
+    isDefault: v.optional(v.boolean()),  // Default for this type
+    isActive: v.boolean(),               // Soft delete
+    source: v.union(v.literal("builtin"), v.literal("custom")),
+
+    createdAt: v.number(),
+    updatedAt: v.optional(v.number()),
+  })
+    .index("by_type", ["type"])
+    .index("by_type_active", ["type", "isActive"])
+    .index("by_type_default", ["type", "isDefault"])
+    .index("by_active", ["isActive"]),
+
+  // DEPRECATED: Legacy tables kept for backward compatibility during migration
+  // These will be removed after migration is complete
+
+  // System Prompts table - versioned system prompts for AI analysis
+  systemPrompts: defineTable({
+    version: v.string(),              // "v1", "v2", "v3"
+    versionNumber: v.number(),        // 1, 2, 3 for sorting
+    name: v.string(),                 // "Linear Analysis System Prompt V1"
+    description: v.optional(v.string()),
+    content: v.string(),              // The actual system prompt text
+
+    isActive: v.boolean(),            // Soft delete flag
+    isDefault: v.optional(v.boolean()), // Is this the default system prompt
+    source: v.union(
+      v.literal("builtin"),           // Seeded from file backup
+      v.literal("custom")             // User-created
+    ),
+
+    createdAt: v.number(),
+    updatedAt: v.optional(v.number()),
+  })
+    .index("by_version", ["version"])
+    .index("by_active", ["isActive"])
+    .index("by_version_number", ["versionNumber"])
+    .index("by_default", ["isDefault"]),
+
+  // User Prompts table - versioned user prompts for AI analysis
+  userPrompts: defineTable({
+    version: v.string(),
+    versionNumber: v.number(),
+    name: v.string(),
+    description: v.optional(v.string()),
+    content: v.string(),              // The actual user prompt text
+
+    isActive: v.boolean(),
+    isDefault: v.optional(v.boolean()), // Is this the default user prompt
+    source: v.union(
+      v.literal("builtin"),
+      v.literal("custom")
+    ),
+
+    createdAt: v.number(),
+    updatedAt: v.optional(v.number()),
+  })
+    .index("by_version", ["version"])
+    .index("by_active", ["isActive"])
+    .index("by_version_number", ["versionNumber"])
+    .index("by_default", ["isDefault"]),
+
+  // JSON Schemas table - versioned output schemas for AI analysis
+  jsonSchemas: defineTable({
+    version: v.string(),
+    versionNumber: v.number(),
+    name: v.string(),
+    description: v.optional(v.string()),
+    content: v.string(),              // JSON schema as string
+
+    isActive: v.boolean(),
+    isDefault: v.optional(v.boolean()), // Is this the default schema
+    source: v.union(
+      v.literal("builtin"),
+      v.literal("custom")
+    ),
+
+    createdAt: v.number(),
+    updatedAt: v.optional(v.number()),
+  })
+    .index("by_version", ["version"])
+    .index("by_active", ["isActive"])
+    .index("by_version_number", ["versionNumber"])
+    .index("by_default", ["isDefault"]),
+
+  // Prompt Configurations table - combines system prompt + user prompt + schema
+  promptConfigurations: defineTable({
+    name: v.string(),                          // "Flowchart Analysis V2"
+    description: v.optional(v.string()),
+
+    systemPromptId: v.id("systemPrompts"),
+    userPromptId: v.id("userPrompts"),
+    jsonSchemaId: v.id("jsonSchemas"),
+
+    isDefault: v.boolean(),                    // Is this the default for new uploads
+    isActive: v.boolean(),                     // Soft delete flag
+    source: v.union(
+      v.literal("builtin"),
+      v.literal("custom")
+    ),
+
+    createdAt: v.number(),
+    updatedAt: v.optional(v.number()),
+  })
+    .index("by_default", ["isDefault"])
+    .index("by_active", ["isActive"]),
 });
 
 // Export validators for use in other files

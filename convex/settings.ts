@@ -181,7 +181,21 @@ export const getEncryptedApiKey = internalQuery({
 });
 
 /**
+ * Get any setting by key (internal, returns raw value)
+ */
+export const getSettingInternal = internalQuery({
+  args: { key: v.string() },
+  handler: async (ctx, args) => {
+    return await ctx.db
+      .query("settings")
+      .withIndex("by_key", (q) => q.eq("key", args.key))
+      .first();
+  },
+});
+
+/**
  * Get analysis prompts (for use in actions)
+ * @deprecated Use analysisPrompts.getDefaultPromptConfigurationInternal instead
  */
 export const getAnalysisPromptsInternal = internalQuery({
   args: {},

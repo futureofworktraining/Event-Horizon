@@ -17,6 +17,7 @@ import { Code, Copy, Check, X, ChevronRight, ChevronDown } from "lucide-react";
 
 interface RawResponseViewerProps {
   jobId: Id<"jobs">;
+  processData?: any;
 }
 
 interface JsonNodeProps {
@@ -176,7 +177,7 @@ function JsonNode({ data, keyName, depth = 0, defaultExpanded = true }: JsonNode
   return null;
 }
 
-export function RawResponseViewer({ jobId }: RawResponseViewerProps) {
+export function RawResponseViewer({ jobId, processData }: RawResponseViewerProps) {
   const [copied, setCopied] = useState(false);
   const [isOpen, setIsOpen] = useState(false);
 
@@ -186,21 +187,47 @@ export function RawResponseViewer({ jobId }: RawResponseViewerProps) {
   const isLoading = job === undefined;
 
   const { parsedResponse, beautifiedJson } = useMemo(() => {
-    if (!job?.rawAiResponse) {
-      return { parsedResponse: null, beautifiedJson: "" };
+    // First try raw AI response from job
+    if (job?.rawAiResponse) {
+      try {
+        const parsed = JSON.parse(job.rawAiResponse);
+        return {
+          parsedResponse: parsed,
+          beautifiedJson: JSON.stringify(parsed, null, 2),
+        };
+      } catch {
+        return { parsedResponse: null, beautifiedJson: job.rawAiResponse };
+      }
     }
-    try {
-      const parsed = JSON.parse(job.rawAiResponse);
-      return {
-        parsedResponse: parsed,
-        beautifiedJson: JSON.stringify(parsed, null, 2),
+    // Fallback: build JSON from process data
+    if (processData) {
+      const data: any = {
+        processName: processData.processName,
+        processDescription: processData.processDescription,
+        recordingDurationSeconds: processData.recordingDurationSeconds,
+        applications: processData.applications,
+        businessRulesObserved: processData.businessRulesObserved,
+        exceptionsNoted: processData.exceptionsNoted,
+        steps: processData.steps?.map((s: any) => {
+          const { screenshotUrl, screenshotStorageId, boundingBoxOverlayUrl, sensitiveInfoOverlayUrl, ...rest } = s;
+          return rest;
+        }),
+        flow: processData.flow,
+        subprocesses: processData.subprocesses?.map((sp: any) => ({
+          processName: sp.processName,
+          processDescription: sp.processDescription,
+          _id: sp._id,
+        })),
       };
-    } catch {
-      return { parsedResponse: null, beautifiedJson: job.rawAiResponse };
+      return {
+        parsedResponse: data,
+        beautifiedJson: JSON.stringify(data, null, 2),
+      };
     }
-  }, [job?.rawAiResponse]);
+    return { parsedResponse: null, beautifiedJson: "" };
+  }, [job?.rawAiResponse, processData]);
 
-  const hasResponse = !!job?.rawAiResponse;
+  const hasResponse = !!job?.rawAiResponse || !!processData;
 
   const handleCopy = async () => {
     await navigator.clipboard.writeText(beautifiedJson || job?.rawAiResponse || "");
@@ -235,7 +262,7 @@ export function RawResponseViewer({ jobId }: RawResponseViewerProps) {
         <DialogHeader className="px-4 py-3 border-b bg-gray-100 flex-shrink-0">
           <div className="flex items-center justify-between">
             <DialogTitle className="text-sm font-medium text-gray-700">
-              Raw Gemini Response
+              {job?.rawAiResponse ? "Raw Gemini Response" : "Process JSON Data"}
             </DialogTitle>
             <div className="flex items-center gap-2">
               {/* Summary stats - compact */}

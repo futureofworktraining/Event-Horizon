@@ -1,6 +1,8 @@
 export { ActionTypeBadge } from "./ActionTypeBadge";
+export { AnalysisPromptEditor } from "./AnalysisPromptEditor";
 export { ApplicationsList } from "./ApplicationsList";
 export { AutoProcessingOrchestrator } from "./AutoProcessingOrchestrator";
+export { DetectionPromptEditor } from "./DetectionPromptEditor";
 export { ExportButton } from "./ExportButton";
 export { ExportDialog } from "./ExportDialog";
 export { ProcessHeader } from "./ProcessHeader";

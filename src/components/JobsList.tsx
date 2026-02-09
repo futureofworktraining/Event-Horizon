@@ -75,11 +75,13 @@ interface Job {
 }
 
 function ElapsedTime({ startTime }: { startTime: number }) {
-  const [elapsed, setElapsed] = useState(0);
+  const [elapsed, setElapsed] = useState(() =>
+    Math.max(0, Math.floor((Date.now() - startTime) / 1000))
+  );
 
   useEffect(() => {
     const interval = setInterval(() => {
-      setElapsed(Math.floor((Date.now() - startTime) / 1000));
+      setElapsed(Math.max(0, Math.floor((Date.now() - startTime) / 1000)));
     }, 1000);
     return () => clearInterval(interval);
   }, [startTime]);
@@ -272,10 +274,22 @@ export function JobsList() {
     // Check for new failures
     jobs.forEach((job) => {
       if (job.status === "failed" && !notifiedFailureRef.current.has(job._id)) {
-        toast.error(`Analysis failed: ${job.errorMessage || "Unknown error"}`, {
-          description: `File: ${job.fileName}`,
-          duration: 5000,
-        });
+        const isApiKeyError = job.errorMessage?.toLowerCase().includes("gemini api key not configured");
+        if (isApiKeyError) {
+          toast.error("Gemini API key not configured", {
+            description: "Get your free API key at aistudio.google.com/apikey, then add it in Settings.",
+            duration: 10000,
+            action: {
+              label: "Open Settings",
+              onClick: () => window.location.href = "/settings",
+            },
+          });
+        } else {
+          toast.error(`Analysis failed: ${job.errorMessage || "Unknown error"}`, {
+            description: `File: ${job.fileName}`,
+            duration: 5000,
+          });
+        }
         notifiedFailureRef.current.add(job._id);
       }
     });

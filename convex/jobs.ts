@@ -35,6 +35,8 @@ export const createJob = mutation({
       autoBoundingBoxes: args.autoBoundingBoxes ?? true,
       autoSensitiveInfo: args.autoSensitiveInfo ?? false,
       sensitiveInfoPrompt: args.sensitiveInfoPrompt,
+      // Always use agent mode
+      analysisMode: "agent",
     });
     return jobId;
   },
@@ -155,14 +157,30 @@ export const updateStepScreenshot = mutation({
 export const getStepsNeedingScreenshots = query({
   args: { processId: v.id("processes") },
   handler: async (ctx, args) => {
+    // Get the process to find the job
+    const process = await ctx.db.get(args.processId);
+    if (!process) return [];
+
+    // Get the job to check autoExtractScreenshots setting
+    const job = await ctx.db.get(process.jobId);
+    const autoExtractScreenshots = job?.autoExtractScreenshots ?? true;
+
     const steps = await ctx.db
       .query("steps")
       .withIndex("by_process", (q) => q.eq("processId", args.processId))
       .collect();
 
-    // Return only steps that need screenshots and don't have them yet
+    // When autoExtractScreenshots is enabled, extract for ALL steps
+    // Otherwise, only extract for steps marked as screenshotRequired
     return steps
-      .filter((step) => step.screenshotRequired && !step.screenshotStorageId)
+      .filter((step) => {
+        // Skip steps that already have screenshots
+        if (step.screenshotStorageId) return false;
+        // If autoExtractScreenshots is enabled, extract for all steps
+        if (autoExtractScreenshots) return true;
+        // Otherwise, only extract for steps marked as required
+        return step.screenshotRequired;
+      })
       .sort((a, b) => a.stepNumber - b.stepNumber)
       .map((step) => ({
         _id: step._id,
@@ -242,6 +260,10 @@ export const getStepsNeedingBoundingBoxes = query({
 export const getAllStepsNeedingScreenshots = query({
   args: { jobId: v.id("jobs") },
   handler: async (ctx, args) => {
+    // Get the job to check autoExtractScreenshots setting
+    const job = await ctx.db.get(args.jobId);
+    const autoExtractScreenshots = job?.autoExtractScreenshots ?? true;
+
     const allProcesses = await ctx.db
       .query("processes")
       .withIndex("by_job", (q) => q.eq("jobId", args.jobId))
@@ -262,8 +284,14 @@ export const getAllStepsNeedingScreenshots = query({
         .withIndex("by_process", (q) => q.eq("processId", process._id))
         .collect();
 
+      // When autoExtractScreenshots is enabled, extract for ALL steps
+      // Otherwise, only extract for steps marked as screenshotRequired
       const stepsNeedingScreenshots = steps
-        .filter((s) => s.screenshotRequired && !s.screenshotStorageId)
+        .filter((s) => {
+          if (s.screenshotStorageId) return false;
+          if (autoExtractScreenshots) return true;
+          return s.screenshotRequired;
+        })
         .sort((a, b) => a.stepNumber - b.stepNumber);
 
       for (const step of stepsNeedingScreenshots) {
@@ -376,6 +404,8 @@ export const getJobProcessingStatus = query({
     const job = await ctx.db.get(args.jobId);
     if (!job) return null;
 
+    const autoExtractScreenshots = job.autoExtractScreenshots ?? true;
+
     const allProcesses = await ctx.db
       .query("processes")
       .withIndex("by_job", (q) => q.eq("jobId", args.jobId))
@@ -388,9 +418,12 @@ export const getJobProcessingStatus = query({
           .withIndex("by_process", (q) => q.eq("processId", process._id))
           .collect();
 
-        const stepsNeedingScreenshots = steps.filter(
-          (s) => s.screenshotRequired && !s.screenshotStorageId
-        ).length;
+        // When autoExtractScreenshots is enabled, ALL steps need screenshots
+        const stepsNeedingScreenshots = steps.filter((s) => {
+          if (s.screenshotStorageId) return false;
+          if (autoExtractScreenshots) return true;
+          return s.screenshotRequired;
+        }).length;
 
         const stepsWithScreenshots = steps.filter(
           (s) => s.screenshotStorageId
@@ -462,32 +495,75 @@ export const deleteJob = mutation({
       throw new Error("Job not found");
     }
 
-    // If job has a process, delete it and all its steps
-    if (job.processId) {
-      const process = await ctx.db.get(job.processId);
-      if (process) {
-        // Get all steps for this process
-        const steps = await ctx.db
-          .query("steps")
-          .withIndex("by_process", (q) => q.eq("processId", job.processId!))
-          .collect();
+    // Get ALL processes for this job (including subprocesses)
+    const allProcesses = await ctx.db
+      .query("processes")
+      .withIndex("by_job", (q) => q.eq("jobId", args.jobId))
+      .collect();
 
-        // Delete all step screenshots from storage
-        for (const step of steps) {
-          if (step.screenshotStorageId) {
+    // Delete all processes and their associated data
+    for (const process of allProcesses) {
+      // Get all steps for this process
+      const steps = await ctx.db
+        .query("steps")
+        .withIndex("by_process", (q) => q.eq("processId", process._id))
+        .collect();
+
+      // Delete all step screenshots and overlay images from storage
+      for (const step of steps) {
+        if (step.screenshotStorageId) {
+          try {
             await ctx.storage.delete(step.screenshotStorageId);
+          } catch (e) {
+            console.error("Failed to delete screenshot:", e);
           }
-          await ctx.db.delete(step._id);
         }
+        if (step.overlayImageStorageId) {
+          try {
+            await ctx.storage.delete(step.overlayImageStorageId);
+          } catch (e) {
+            console.error("Failed to delete overlay image:", e);
+          }
+        }
+        await ctx.db.delete(step._id);
+      }
 
-        // Delete the process
-        await ctx.db.delete(job.processId);
+      // Delete the process flow
+      const flow = await ctx.db
+        .query("processFlows")
+        .withIndex("by_process", (q) => q.eq("processId", process._id))
+        .first();
+      if (flow) {
+        await ctx.db.delete(flow._id);
+      }
+
+      // Delete the process
+      await ctx.db.delete(process._id);
+    }
+
+    // Delete any documents associated with this job's processes
+    for (const process of allProcesses) {
+      const docs = await ctx.db
+        .query("documents")
+        .withIndex("by_process", (q) => q.eq("processId", process._id))
+        .collect();
+      for (const doc of docs) {
+        try {
+          await ctx.storage.delete(doc.storageId);
+        } catch (e) {
+          console.error("Failed to delete document:", e);
+        }
+        await ctx.db.delete(doc._id);
       }
     }
 
     // Delete the video from storage
     if (job.videoStorageId) {
-      await ctx.storage.delete(job.videoStorageId);
+      try {
+        await ctx.storage.delete(job.videoStorageId);
+      } catch (e) {
+        console.error("Failed to delete video:", e);
+      }
     }
 
     // Delete the job
