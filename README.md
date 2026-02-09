@@ -1,27 +1,60 @@
-# Video to PDD - Process Documentation Generator
+# Event Horizon AI - Process Documentation from Video
 
-Transform screen recordings into detailed Process Design Documents using AI.
+Every organization runs on processes - yet most of those processes exist only in people's heads. When someone asks "how does this actually work?", the answer is usually a screen recording, a screen share, or "let me show you." The knowledge is locked inside conversations, presentations, and demonstrations that nobody has time to turn into structured documentation.
 
-## Features
+**Event Horizon AI** breaches that gap. Upload a simple "show-and-tell" video and get detailed process documentation and flowcharts in minutes, not hours or days. No complex software to install. No days of training.
 
-- **Video Upload**: Drag-and-drop interface for uploading screen recordings (MP4, WebM, MOV, AVI)
-- **AI Analysis**: Powered by Google Gemini 2.5 Flash for intelligent video understanding
-- **Structured Output**: Generates detailed PDD documentation with:
-  - Process metadata and descriptions
-  - Applications used
-  - Step-by-step actions with timestamps
-  - UI element identification
-  - Data information (with sensitive data masking)
-  - Business rules and exceptions
-- **JSON Export**: Export documentation in standard PDD JSON format
-- **Real-time Updates**: See analysis progress in real-time
+## What It Does
+
+Event Horizon AI takes a screen recording of any business process and produces a complete, structured Process Design Document (PDD) - a machine-readable blueprint that humans can review and AI agents or Robotic Process Automation robots can act on.
+
+Upload a video. Get back:
+
+- **Step-by-step documentation** - every user action and system response, timestamped to the exact moment in the video (`MM:SS.s`)
+- **Interactive flowcharts** - auto-generated process diagrams with 8 node types (start, end, action, decision, switch, merge, subprocess, loop_back), rendered with React Flow
+- **UI element identification** - for each step, the specific element interacted with: its type (37 categories), screen region (9-zone grid), and identifiers (XPath, CSS class, accessibility label)
+- **Bounding box overlays** - AI-powered spatial detection that draws a box around the exact UI element in each screenshot, using Gemini's `box_2d` coordinate system (normalized 0-1000 scale)
+- **Sensitive data masking** - automatic detection of passwords, PII, credit card numbers, SSNs with visual masking and `is_sensitive` flags
+- **Data mapping** - what data flows through each step, its type, source, and whether it needs secure handling
+- **Variable standardization** - specific business values replaced with generic `{{VariableName}}` placeholders, making documentation reusable and environment-agnostic
+- **Process hierarchy** - complex processes decomposed into nested subprocesses up to 5 levels deep
+- **Export** - structured JSON for automation platforms and AI agents, or DOCX/PDF for human stakeholders
+
+In essence, it can help organizations save hundreds of hours in process discovery and documentation.
+
+## How It Works
+
+Instead of asking Gemini to produce the entire document in one shot, Event Horizon AI uses an **autonomous ReAct (Reason + Act) agent loop** - the same pattern used by Gemini CLI. The ReAct agent is embedded into the tool and acts like a business analyst: it watches the video, reasons about what it sees, writes documentation incrementally, and reviews its own work. This significantly improves quality over a traditional single-pass AI workflow.
+
+```
+while (iteration < 50):
+    REASON  -> Gemini analyzes the video and decides what to do next
+    ACT     -> Calls read_pdd or write_pdd tools
+    OBSERVE -> Tool results fed back into the conversation
+    EMIT    -> Events streamed to the UI in real-time
+```
+
+### Key Gemini Features
+
+1. **Long Context Video Understanding** - Gemini watches the entire recording and understands actions in sequence
+2. **Context Caching** - the video tokens are cached so costs stay under control despite the agent querying the video multiple times (75% cost reduction)
+3. **Function Calling** - two tools with full parameter schemas:
+   - `read_pdd(section, process_id)` - read back the document being built
+   - `write_pdd(operation, process_id, data)` - add processes, steps, flowcharts incrementally
+4. **Spatial Understanding** - bounding box detection locates exact UI elements in screenshots
+5. **Structured Output** - JSON Schema enforcement guarantees valid, typed responses
+6. **Thinking Mode Control** - enabled for reasoning, disabled for spatial tasks where it degrades accuracy
 
 ## Tech Stack
 
-- **Frontend**: Next.js 14+ (App Router), React, TypeScript
-- **Backend**: Convex (Database, File Storage, Serverless Functions)
-- **AI**: Google Gemini 2.5 Flash
-- **Styling**: Tailwind CSS, shadcn/ui
+| Layer | Technology |
+|---|---|
+| **Frontend** | Next.js 16 (App Router), React 19, TypeScript, Tailwind CSS, shadcn/ui |
+| **Backend** | Convex (real-time database, file storage, serverless functions) |
+| **AI** | Google Gemini 2.5 Flash via `@google/genai` |
+| **Visualization** | React Flow (`@xyflow/react`) + Dagre (auto-layout) |
+| **Video Processing** | FFmpeg (screenshot extraction) |
+| **Image Processing** | Sharp + Jimp (bounding box overlays) |
 
 ## Setup
 
@@ -44,10 +77,7 @@ Transform screen recordings into detailed Process Design Documents using AI.
    ```bash
    npx convex dev
    ```
-   This will:
-   - Create a Convex project (first time only)
-   - Generate the `.env.local` file with your `NEXT_PUBLIC_CONVEX_URL`
-   - Start the Convex development server
+   This will create a Convex project (first time only), generate `.env.local` with your `NEXT_PUBLIC_CONVEX_URL`, and start the Convex development server.
 
 3. **Configure Gemini API Key**:
    - Go to your Convex dashboard (https://dashboard.convex.dev)
@@ -60,70 +90,88 @@ Transform screen recordings into detailed Process Design Documents using AI.
    npm run dev
    ```
 
-5. Open http://localhost:3000 in your browser
+5. Open http://localhost:3000
 
-### Running in Production
+### Production Deployment
 
-1. Deploy Convex:
-   ```bash
-   npx convex deploy
-   ```
-
-2. Build and start Next.js:
-   ```bash
-   npm run build
-   npm start
-   ```
+```bash
+npx convex deploy
+npm run build
+npm start
+```
 
 ## Usage
 
 1. Navigate to the Upload page
-2. Drag and drop a screen recording video (or click to browse)
-3. Wait for the AI analysis to complete
-4. View the generated PDD documentation
-5. Export as JSON for use in RPA tools
+2. Drag and drop a screen recording (MP4, WebM, MOV, AVI - max 100MB)
+3. Configure analysis options (screenshot extraction, bounding box detection, sensitive data masking)
+4. Watch the AI agent analyze the video in real-time via the Agent Panel
+5. Review the generated PDD in List View or interactive Flowchart View
+6. Edit steps, flowcharts, and metadata inline
+7. Export as JSON, DOCX, or PDF
 
 ## Project Structure
 
 ```
 video-to-pdd/
 ├── src/
-│   ├── app/                 # Next.js pages
-│   │   ├── page.tsx         # Home page
-│   │   ├── upload/          # Upload page
-│   │   └── process/[id]/    # Process results page
+│   ├── app/                     # Next.js pages
+│   │   ├── page.tsx             # Dashboard with stats and recent activity
+│   │   ├── upload/              # Video upload with analysis options
+│   │   └── process/[id]/        # Process viewer (list + flowchart + agent panel)
 │   ├── components/
-│   │   ├── ui/              # shadcn/ui components
-│   │   ├── pdd/             # PDD display components
-│   │   ├── Header.tsx
-│   │   ├── VideoUploader.tsx
-│   │   └── JobsList.tsx
-│   └── lib/                 # Utilities
+│   │   ├── ui/                  # shadcn/ui base components
+│   │   ├── pdd/                 # PDD display & editing components
+│   │   ├── flowchart/           # React Flow nodes, edges, viewer
+│   │   └── Header.tsx
+│   └── lib/
 ├── convex/
-│   ├── schema.ts            # Database schema
-│   ├── jobs.ts              # Job mutations/queries
-│   ├── processes.ts         # Process queries
-│   ├── analyze.ts           # Gemini analysis action
-│   ├── prompts.ts           # AI prompts
-│   └── types.ts             # TypeScript types
+│   ├── schema.ts                # Database schema (jobs, processes, steps, flows, agents)
+│   ├── analyze.ts               # Single-pass Gemini analysis action
+│   ├── agentAnalyze.ts          # ReAct agent orchestrator
+│   ├── agentLoop.ts             # Core ReAct loop (reason -> act -> observe)
+│   ├── agentTools.ts            # read_pdd / write_pdd tool declarations & execution
+│   ├── agentEvents.ts           # Real-time event streaming to UI
+│   ├── agentSessions.ts         # Session lifecycle (pause/resume/stop)
+│   ├── geminiApi.ts             # Gemini REST API wrapper (cache, generate, tools)
+│   ├── boundingBoxes.ts         # AI-powered UI element detection
+│   ├── boundingBoxOverlay.ts    # Bounding box overlay image generation
+│   ├── sensitiveInfoDetection.ts # Sensitive data detection
+│   ├── prompts/                 # System prompt, user prompt, JSON schema
+│   ├── flows.ts                 # Flowchart generation and management
+│   └── types.ts                 # Type definitions and validators
 └── package.json
 ```
 
 ## PDD Output Schema
 
-The generated PDD follows a standard schema with:
+The generated PDD follows a comprehensive schema:
 
-- **process_metadata**: Name, description, duration, applications used
-- **steps[]**: Array of process steps with:
-  - `step_number`, `timestamp`
+- **Process metadata**: name, description, duration, applications used, business rules, exceptions
+- **Steps[]**: Array of process steps, each with:
+  - `step_number`, `timestamp` (MM:SS.s), `flow_node_id`
   - `action_type`: ui_interaction, navigation, data_transfer, explanation, wait, validation
-  - `specific_action`: click, type, navigate_to_url, etc.
-  - `description`: What happens in this step
-  - `ui_element`: Element name, type, location, identifiers
-  - `data_info`: Value, type, source, sensitivity
-  - `wait_condition`: Wait type, timeout
-  - `automation_hint`: Tips for RPA implementation
+  - `specific_action`: 34 actions (click, type, navigate_to_url, select, verify_element, etc.)
+  - `description`: starts with "User" or "System" for clarity
+  - `ui_element`: name, type (37 types), screen region (9-zone grid), identifiers (XPath, class, accessibility)
+  - `data_info`: value, type, source, `is_sensitive` flag
+  - `wait_condition`: type, timeout, retry count
+  - `automation_hint`: tips for implementation
+- **Flow**: nodes (8 types) + edges (with conditions and labels) for flowchart visualization
+
+## What's Next
+
+Event Horizon AI is the foundation for **AI-driven process intelligence**:
+
+- **Chat Interface** - conversational editing: "Add a validation step before submission"
+- **Structured Export Formats** - BPMN 2.0, UiPath, Automation Anywhere native formats
+- **Process Comparison** - diff two PDDs to track how workflows evolve
+- **AI Agent Handoff** - generate task definitions that AI agents can execute autonomously
+- **Multi-Language** - PDD generation in any language via Gemini's multilingual capabilities
+- **Optimization Suggestions** - AI-powered recommendations to simplify processes
+
+The goal: make the AI Process Analyst the standard first step for every digitalization initiative - replacing weeks of manual discovery with minutes of intelligent video analysis.
 
 ## License
 
-MIT
+Apache 2.0
