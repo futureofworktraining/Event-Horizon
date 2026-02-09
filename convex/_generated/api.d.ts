@@ -29,6 +29,8 @@ import type * as flows from "../flows.js";
 import type * as geminiApi from "../geminiApi.js";
 import type * as internal_ from "../internal.js";
 import type * as jobs from "../jobs.js";
+import type * as migration from "../migration.js";
+import type * as migrationActions from "../migrationActions.js";
 import type * as migrations from "../migrations.js";
 import type * as processDataHandler from "../processDataHandler.js";
 import type * as processes from "../processes.js";
@@ -79,6 +81,8 @@ declare const fullApi: ApiFromModules<{
   geminiApi: typeof geminiApi;
   internal: typeof internal_;
   jobs: typeof jobs;
+  migration: typeof migration;
+  migrationActions: typeof migrationActions;
   migrations: typeof migrations;
   processDataHandler: typeof processDataHandler;
   processes: typeof processes;
