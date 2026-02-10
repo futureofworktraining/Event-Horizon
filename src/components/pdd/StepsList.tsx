@@ -808,32 +808,92 @@ function SubprocessItem({ node, onSubprocessClick, subprocesses }: SubprocessIte
 
       const hasFlow = flowNodes && flowEdges && flowNodes.length > 0 && flowNodes.find(n => n.nodeType === "start");
 
-      if (!showDecisions || !hasFlow) {
-        // Just return steps sorted by step number
-        const result: ListItem[] = [...steps]
-          .sort((a, b) => a.stepNumber - b.stepNumber)
-          .map(s => ({ type: "step" as const, step: s }));
+      // Helper to parse MM:SS.s timestamp to seconds
+      const parseTs = (ts?: string): number => {
+        if (!ts) return Infinity;
+        const parts = ts.split(":");
+        if (parts.length === 2) return parseFloat(parts[0]) * 60 + parseFloat(parts[1]);
+        return Infinity;
+      };
 
-        // Add subprocesses that aren't already represented if any
+      // Filter out subprocess placeholder/stub steps
+      const subprocessFlowNodeIds = new Set(
+        (flowNodes || [])
+          .filter(n => n.nodeType === "subprocess")
+          .map(n => n.nodeId)
+      );
+      const subprocessNames = new Set(
+        (subprocesses || []).map(p => (p.processName as string)?.toLowerCase()).filter(Boolean)
+      );
+      const filteredSteps = steps.filter(step => {
+        // If step is linked to a subprocess flow node, hide it
+        if (step.flowNodeId && subprocessFlowNodeIds.has(step.flowNodeId)) {
+          return false;
+        }
+        // If step description references a subprocess and subprocesses exist
         if (subprocesses && subprocesses.length > 0) {
-          subprocesses.forEach(p => {
+          const desc = step.description.toLowerCase();
+          if (desc.includes("subprocess") || desc.includes("sub-process") || desc.includes("sub process")) {
+            // Check if it matches any known subprocess name
+            for (const name of subprocessNames) {
+              if (name && desc.includes(name.replace(/\s+/g, ' ').toLowerCase().split(' ')[0])) {
+                return false;
+              }
+            }
+            // Also filter if specificAction is "note" and description mentions "subprocess"
+            if (step.specificAction === "note") {
+              return false;
+            }
+          }
+        }
+        return true;
+      });
+
+      if (!showDecisions || !hasFlow) {
+        const sortedSteps = [...filteredSteps].sort((a, b) => a.stepNumber - b.stepNumber);
+
+        if (!subprocesses || subprocesses.length === 0) {
+          return sortedSteps.map(s => ({ type: "step" as const, step: s }));
+        }
+
+        // Merge steps and subprocesses by timestamp for chronological ordering
+        const result: ListItem[] = [];
+        const sortedSubprocesses = [...subprocesses].sort(
+          (a, b) => parseTs(a.videoStartTimestamp) - parseTs(b.videoStartTimestamp)
+        );
+
+        let si = 0;
+        let spi = 0;
+
+        while (si < sortedSteps.length || spi < sortedSubprocesses.length) {
+          const stepTs = si < sortedSteps.length ? (sortedSteps[si].timestampSeconds ?? 0) : Infinity;
+          const subTs = spi < sortedSubprocesses.length ? parseTs(sortedSubprocesses[spi].videoStartTimestamp) : Infinity;
+
+          if (stepTs <= subTs && si < sortedSteps.length) {
+            result.push({ type: "step" as const, step: sortedSteps[si] });
+            si++;
+          } else if (spi < sortedSubprocesses.length) {
             result.push({
               type: "subprocess",
               node: {
-                nodeId: `sub-${p._id}`,
+                nodeId: `sub-${sortedSubprocesses[spi]._id}`,
                 nodeType: "subprocess",
-                subprocessId: p._id,
-                label: p.processName
+                subprocessId: sortedSubprocesses[spi]._id,
+                label: sortedSubprocesses[spi].processName
               }
             });
-          });
+            spi++;
+          } else {
+            break;
+          }
         }
+
         return result;
       }
 
-      // Create a map of flowNodeId to step
+      // Create a map of flowNodeId to step (using filteredSteps)
       const nodeToStep = new Map<string, ProcessStep>();
-      steps.forEach(s => {
+      filteredSteps.forEach(s => {
         if (s.flowNodeId) {
           nodeToStep.set(s.flowNodeId, s);
         }
@@ -862,25 +922,44 @@ function SubprocessItem({ node, onSubprocessClick, subprocesses }: SubprocessIte
       // Find start node
       const startNode = flowNodes.find(n => n.nodeType === "start");
       if (!startNode) {
-        // Fallback: just show steps sorted by number
-        const result: ListItem[] = [...steps]
-          .sort((a, b) => a.stepNumber - b.stepNumber)
-          .map(s => ({ type: "step" as const, step: s }));
+        // Fallback: just show steps sorted by number with chronological subprocesses
+        const sortedSteps = [...filteredSteps].sort((a, b) => a.stepNumber - b.stepNumber);
 
-        // Add subprocesses if any
-        if (subprocesses && subprocesses.length > 0) {
-          subprocesses.forEach(p => {
+        if (!subprocesses || subprocesses.length === 0) {
+          return sortedSteps.map(s => ({ type: "step" as const, step: s }));
+        }
+
+        const result: ListItem[] = [];
+        const sortedSubprocesses = [...subprocesses].sort(
+          (a, b) => parseTs(a.videoStartTimestamp) - parseTs(b.videoStartTimestamp)
+        );
+
+        let si = 0;
+        let spi = 0;
+
+        while (si < sortedSteps.length || spi < sortedSubprocesses.length) {
+          const stepTs = si < sortedSteps.length ? (sortedSteps[si].timestampSeconds ?? 0) : Infinity;
+          const subTs = spi < sortedSubprocesses.length ? parseTs(sortedSubprocesses[spi].videoStartTimestamp) : Infinity;
+
+          if (stepTs <= subTs && si < sortedSteps.length) {
+            result.push({ type: "step" as const, step: sortedSteps[si] });
+            si++;
+          } else if (spi < sortedSubprocesses.length) {
             result.push({
               type: "subprocess",
               node: {
-                nodeId: `sub-${p._id}`,
+                nodeId: `sub-${sortedSubprocesses[spi]._id}`,
                 nodeType: "subprocess",
-                subprocessId: p._id,
-                label: p.processName
+                subprocessId: sortedSubprocesses[spi]._id,
+                label: sortedSubprocesses[spi].processName
               }
             });
-          });
+            spi++;
+          } else {
+            break;
+          }
         }
+
         return result;
       }
 
@@ -896,7 +975,7 @@ function SubprocessItem({ node, onSubprocessClick, subprocesses }: SubprocessIte
       const getStepFromNode = (node: FlowNode): ProcessStep | null => {
         if (node.nodeType !== "action") return null;
         return node.stepNumber
-          ? steps.find(s => s.stepNumber === node.stepNumber) || null
+          ? filteredSteps.find(s => s.stepNumber === node.stepNumber) || null
           : nodeToStep.get(node.nodeId) || null;
       };
 
@@ -1064,7 +1143,7 @@ function SubprocessItem({ node, onSubprocessClick, subprocesses }: SubprocessIte
       const addedStepNumbers = new Set(
         items.filter(i => i.type === "step").map(i => (i as { type: "step"; step: ProcessStep }).step.stepNumber)
       );
-      const missingSteps = [...steps]
+      const missingSteps = [...filteredSteps]
         .filter(s => !addedStepNumbers.has(s.stepNumber))
         .sort((a, b) => a.stepNumber - b.stepNumber);
 
@@ -1078,7 +1157,7 @@ function SubprocessItem({ node, onSubprocessClick, subprocesses }: SubprocessIte
         missingSteps.forEach(s => items.push({ type: "step", step: s }));
       }
 
-      // Add any subprocesses that weren't found in flow traversal
+      // Insert any subprocesses that weren't found in flow traversal at chronological positions
       const addedSubprocessIds = new Set(
         items.filter(i => i.type === "subprocess").map(i => (i as { type: "subprocess"; node: FlowNode }).node.subprocessId)
       );
@@ -1086,23 +1165,36 @@ function SubprocessItem({ node, onSubprocessClick, subprocesses }: SubprocessIte
         .filter(p => !addedSubprocessIds.has(p._id));
 
       if (missingSubprocesses.length > 0) {
-        if (items.filter(i => i.type === "branch-header" && i.decisionNodeId === "other").length === 0) {
-          items.push({
-            type: "branch-header",
-            branchLabel: "Related",
-            decisionLabel: "Sub-processes",
-            decisionNodeId: "other"
-          });
-        }
-        missingSubprocesses.forEach(p => items.push({
-          type: "subprocess",
-          node: {
-            nodeId: `missing-${p._id}`,
-            nodeType: "subprocess",
-            subprocessId: p._id,
-            label: p.processName
+        missingSubprocesses.forEach(p => {
+          const subItem: ListItem = {
+            type: "subprocess",
+            node: {
+              nodeId: `missing-${p._id}`,
+              nodeType: "subprocess",
+              subprocessId: p._id,
+              label: p.processName
+            }
+          };
+
+          const subTs = parseTs(p.videoStartTimestamp);
+
+          if (subTs === Infinity) {
+            // No timestamp — append at end
+            items.push(subItem);
+            return;
           }
-        }));
+
+          // Find the right position: after the last step with timestamp <= subTs
+          let insertIdx = items.length;
+          for (let i = items.length - 1; i >= 0; i--) {
+            const item = items[i];
+            if (item.type === "step" && ((item.step.timestampSeconds ?? 0) <= subTs)) {
+              insertIdx = i + 1;
+              break;
+            }
+          }
+          items.splice(insertIdx, 0, subItem);
+        });
       }
 
       return items;

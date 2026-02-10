@@ -14,7 +14,7 @@
 
 import { ConvexHttpClient } from "convex/browser";
 import { api } from "../convex/_generated/api";
-import { FunctionReference, FunctionReturnType } from "convex/server";
+import { FunctionReference } from "convex/server";
 
 // ============================================
 // CONFIGURATION
@@ -235,9 +235,6 @@ async function transferFiles(): Promise<void> {
 // ============================================
 // GENERIC TABLE MIGRATION
 // ============================================
-
-type ExportQuery = typeof api.migration.exportSettings;
-type ImportMutation = typeof api.migration.importSettings;
 
 async function migrateTable(
   tableName: string,

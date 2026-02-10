@@ -47,6 +47,9 @@ export function AutoProcessingOrchestrator({ jobId }: AutoProcessingOrchestrator
   const [isDismissed, setIsDismissed] = useState(false);
   const processingRef = useRef(false);
   const hasStartedRef = useRef(false);
+  const prevScreenshotCountRef = useRef<number | null>(null);
+  const screenshotProcessingRef = useRef(false);
+  const bbTriggeredForCompletedRef = useRef(false);
 
   // Queries
   const processingStatus = useQuery(api.jobs.getJobProcessingStatus, { jobId });
@@ -260,33 +263,88 @@ export function AutoProcessingOrchestrator({ jobId }: AutoProcessingOrchestrator
     return true;
   }, [detectSensitiveBoxesSingleStep, addError]);
 
-  // Main processing function
+  // Lightweight function: only extract screenshots (no bounding boxes/sensitive info)
+  const runScreenshotsOnly = useCallback(async () => {
+    if (screenshotProcessingRef.current) return;
+    screenshotProcessingRef.current = true;
+
+    try {
+      await processScreenshots();
+
+      // Only mark complete if nothing else is running
+      if (!processingRef.current) {
+        setState(prev => ({
+          ...prev,
+          phase: "complete",
+        }));
+      }
+    } catch (error) {
+      addError(`Screenshot processing failed: ${error}`);
+    } finally {
+      screenshotProcessingRef.current = false;
+    }
+  }, [processScreenshots, addError]);
+
+  // Function to run bounding boxes + sensitive info (expensive, deferred to job completion)
+  const runBoundingBoxesOnly = useCallback(async () => {
+    if (processingRef.current) return;
+    processingRef.current = true;
+
+    try {
+      // Bounding boxes
+      if (processingStatus?.job.autoBoundingBoxes) {
+        await processBoundingBoxes();
+      }
+
+      // Small delay to let queries refresh
+      await new Promise(resolve => setTimeout(resolve, 2000));
+
+      // Sensitive info
+      if (processingStatus?.job.autoSensitiveInfo) {
+        await processSensitiveInfo();
+      }
+
+      setState(prev => ({
+        ...prev,
+        phase: "complete",
+      }));
+    } catch (error) {
+      setState(prev => ({
+        ...prev,
+        phase: "error",
+        errors: [...prev.errors.slice(-2), `Processing failed: ${error}`],
+      }));
+    } finally {
+      processingRef.current = false;
+    }
+  }, [processingStatus, processBoundingBoxes, processSensitiveInfo]);
+
+  // Main processing function (initial run: screenshots only, bounding boxes deferred)
   const runProcessing = useCallback(async () => {
     if (processingRef.current) return;
     processingRef.current = true;
 
     try {
-      // Phase 1: Screenshots
+      // Phase 1: Screenshots (cheap, run immediately)
       if (processingStatus?.job.autoExtractScreenshots) {
         await processScreenshots();
       }
 
-      // Small delay before bounding boxes (let queries refresh)
-      // This is crucial: wait for the database changes from screenshots 
-      // to propagate to the getStepsNeedingBoundingBoxes query
-      await new Promise(resolve => setTimeout(resolve, 2000));
-
-      // Phase 2: Bounding boxes
-      if (processingStatus?.job.autoBoundingBoxes) {
+      // Phase 2: Bounding boxes - only when job is already completed
+      if (processingStatus?.job.autoBoundingBoxes && processingStatus?.job.status === "completed") {
+        // Small delay to let queries refresh after screenshots
+        await new Promise(resolve => setTimeout(resolve, 2000));
         await processBoundingBoxes();
-      }
 
-      // Small delay
-      await new Promise(resolve => setTimeout(resolve, 2000));
+        // Small delay
+        await new Promise(resolve => setTimeout(resolve, 2000));
 
-      // Phase 3: Sensitive Info
-      if (processingStatus?.job.autoSensitiveInfo) {
-        await processSensitiveInfo();
+        // Phase 3: Sensitive Info (also deferred, depends on screenshots)
+        if (processingStatus?.job.autoSensitiveInfo) {
+          await processSensitiveInfo();
+        }
+
+        bbTriggeredForCompletedRef.current = true;
       }
 
       setState(prev => ({
@@ -319,6 +377,41 @@ export function AutoProcessingOrchestrator({ jobId }: AutoProcessingOrchestrator
       runProcessing();
     }
   }, [processingStatus, videoUrl, runProcessing]);
+
+  // Reactive: re-trigger screenshot extraction when new steps appear
+  useEffect(() => {
+    if (!stepsNeedingScreenshots || !videoUrl || !processingStatus?.job.autoExtractScreenshots) return;
+
+    const currentCount = stepsNeedingScreenshots.length;
+    const prevCount = prevScreenshotCountRef.current;
+
+    // On first load, just record the count (initial processing handled by runProcessing)
+    if (prevCount === null) {
+      prevScreenshotCountRef.current = currentCount;
+      return;
+    }
+
+    // If new steps appeared that need screenshots, trigger extraction
+    if (currentCount > 0 && currentCount > prevCount && !screenshotProcessingRef.current) {
+      prevScreenshotCountRef.current = currentCount;
+      runScreenshotsOnly();
+    } else {
+      prevScreenshotCountRef.current = currentCount;
+    }
+  }, [stepsNeedingScreenshots, videoUrl, processingStatus?.job.autoExtractScreenshots, runScreenshotsOnly]);
+
+  // Deferred: trigger bounding boxes when job completes
+  useEffect(() => {
+    if (bbTriggeredForCompletedRef.current) return;
+    if (processingStatus?.job.status !== "completed") return;
+    if (!processingStatus?.job.autoBoundingBoxes) return;
+    if (!stepsNeedingBoundingBoxes || stepsNeedingBoundingBoxes.length === 0) return;
+    if (processingRef.current || screenshotProcessingRef.current) return;
+
+    // Job just completed, trigger bounding box + sensitive info detection
+    bbTriggeredForCompletedRef.current = true;
+    runBoundingBoxesOnly();
+  }, [processingStatus?.job.status, processingStatus?.job.autoBoundingBoxes, stepsNeedingBoundingBoxes, runBoundingBoxesOnly]);
 
   // Don't render if dismissed or nothing to show
   if (isDismissed) return null;

@@ -9,6 +9,10 @@ import { Toaster } from "@/components/ui/sonner";
 import { ExportProvider } from "@/contexts/ExportContext";
 import { ExportProgressToast } from "@/components/pdd/ExportProgressToast";
 import { ApiKeyCheck } from "@/components/ApiKeyCheck";
+import { DisclaimerModal } from "@/components/DisclaimerModal";
+
+// Force dynamic rendering — Convex requires NEXT_PUBLIC_CONVEX_URL at runtime
+export const dynamic = "force-dynamic";
 
 const geistSans = Geist({
   variable: "--font-geist-sans",
@@ -58,6 +62,7 @@ export default function RootLayout({
             </SidebarProvider>
             <Toaster />
             <ApiKeyCheck />
+            <DisclaimerModal />
             {/* Global export progress toast - persists across navigation */}
             <ExportProgressToast />
           </ExportProvider>
