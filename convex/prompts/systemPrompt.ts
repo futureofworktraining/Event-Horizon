@@ -21,6 +21,14 @@ Use a 9-zone grid to describe element positions:
 ### Timestamp Format
 Use MM:SS.s format (e.g., "00:05.2" for 5.2 seconds, "01:30.0" for 1 minute 30 seconds)
 
+### Step Ordering (CRITICAL)
+- Steps MUST be numbered and ordered in strict chronological sequence matching the video timeline
+- step_number 1 = the FIRST action observed in the video, step_number N = the LAST
+- Timestamps must be monotonically increasing (each step's timestamp >= previous step's timestamp)
+- Do NOT reorganize steps by logical grouping — preserve the exact order they appear in the video
+- If a user returns to a previous screen and performs actions, those are NEW steps with later numbers, not inserted before earlier steps
+- The steps[] array order must match step_number order which must match timestamp order
+
 ### Sensitive Data Handling
 - Passwords: Show as "[MASKED]"
 - Personal Identifiable Information (PII): Show as "[PII MASKED]"
@@ -118,18 +126,28 @@ step_2 → decision_1 → [TAK] → step_3a → merge_1 → step_4
                    → [NIE] → step_3b → merge_1
 \`\`\`
 
-### Subprocess Detection
+### Subprocess Detection (USE SPARINGLY)
 
-Create a SUBPROCESS when you observe:
-- A distinct, reusable sequence of steps (e.g., login, payment, search)
-- A logical grouping that could be extracted and reused
-- A section that appears multiple times in different contexts
-- IMPORTANT: Maximum 5 levels of nesting allowed
+Do NOT create subprocesses unless ALL of these conditions are met:
+1. The sequence is clearly REPEATED in the video (appears 2+ times), OR
+2. The sequence is an OBVIOUS standalone workflow (login, logout, payment checkout) with a clear entry and exit point
 
-For subprocesses:
+AVOID creating subprocesses for:
+- Simple linear sequences that happen only once
+- Logical groupings that "could be" reusable but aren't actually reused in the video
+- Short sequences (fewer than 5 steps)
+- Sequences that would leave orphaned or disconnected steps in the parent process
+
+When in doubt, keep steps in the main process. A flat, complete main process is better than a fragmented one with subprocess references.
+
+For subprocesses (when justified):
 - Create a separate process entry with parent_process_id set
-- Reference it from the parent flow using subprocess node
+- Move ALL relevant steps into the subprocess — do NOT leave related steps behind in the parent
+- Reference it from the parent flow using a subprocess node ONLY (the node itself is the reference)
+- Do NOT create "stub steps" or "placeholder steps" in the parent process that describe the subprocess (e.g., "User logs into the application using the login subprocess"). The subprocess NODE in the flow is the only reference needed.
+- Each step_number must be unique within a process — never duplicate step numbers
 - Assign a unique color_index (0-7) for visual distinction
+- IMPORTANT: Maximum 5 levels of nesting allowed
 
 ### Multiple Processes
 
@@ -167,4 +185,19 @@ Return a JSON object with:
    - steps[] (with flow_node_id linking to nodes)
    - applications, business_rules_observed, exceptions_noted
 
-Be thorough - capture EVERY action and create appropriate decision nodes for any branching logic observed.`;
+Be thorough - capture EVERY action and create appropriate decision nodes for any branching logic observed.
+
+## Self-Verification Checklist (MANDATORY)
+
+Before outputting your response, mentally verify ALL of the following:
+
+1. **Step Order**: Are steps numbered 1, 2, 3... in the exact chronological order they appear in the video? Are timestamps monotonically increasing?
+2. **No Orphaned Steps**: Does every step in a process have a corresponding action node in that process's flow? Does every action node have a matching step?
+3. **Flow Connectivity**: Starting from the "start" node, can you reach an "end" node by following edges? Are there any disconnected nodes or dead ends?
+4. **Subprocess Integrity**: If you created subprocesses, are ALL related steps moved into them? Are there zero "leftover" steps in the parent that logically belong to a subprocess? Are there zero "stub" steps that merely describe calling a subprocess (the subprocess node handles this)?
+5. **No Duplicate Step Numbers**: Is every step_number unique within its process? Are there no two steps with the same number?
+6. **Edge Completeness**: Does every node (except end nodes) have at least one outgoing edge? Does every node (except start) have at least one incoming edge?
+7. **Decision Balance**: Does every decision node have exactly 2 outgoing edges? Does every switch node have 3+ outgoing edges?
+8. **Step-Flow Linkage**: Does every step's flow_node_id match an existing node_id in the same process's flow?
+
+If any check fails, fix the issue before outputting.`;
